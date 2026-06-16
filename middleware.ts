@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Routes that require authentication
 const PROTECTED_PREFIXES = ['/app', '/admin', '/invite']
 
+// These paths within /app don't require onboarding to be complete
+const ONBOARDING_EXEMPT = ['/app/onboarding']
+
 // Routes that super-admin users only can access
 const ADMIN_PREFIXES = ['/admin']
 
