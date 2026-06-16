@@ -81,7 +81,7 @@ export default function CreateTablePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-500 to-navy-600 py-10 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto w-full">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Logo variant="dark-bg" size="md" />

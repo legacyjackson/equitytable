@@ -214,24 +214,26 @@ export function AppShell({ profile, memberships, isAdmin, children }: AppShellPr
 
       {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Top bar — mobile only */}
-        <header className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-white shrink-0">
+        {/* Top bar — mobile only. White bg → light-bg logo ✓ */}
+        <header className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-white shrink-0 safe-top">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-muted-foreground hover:text-foreground p-1"
+            className="text-muted-foreground hover:text-foreground touch-target flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors -ml-1"
             aria-label="Open menu"
           >
-            ☰
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
           </button>
           <LogoMark size={28} variant="light-bg" />
-          <span className="font-display font-semibold text-navy-500 text-sm">
-            Equity Table
+          <span className="font-display font-semibold text-navy-500 text-sm truncate">
+            {activeMembership?.equity_tables?.name || 'Equity Table'}
           </span>
         </header>
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 pb-safe-bottom">
             {children}
           </div>
         </main>

@@ -280,11 +280,27 @@ export default async function EventPage({ params }: EventPageProps) {
             </div>
           )}
 
+          {/* Check-in button — available to all members for live/upcoming events */}
+          {isMember && !isPast && (
+            <Link
+              href={`/app/tables/${tableId}/events/${eventId}/checkin`}
+              className="block w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white text-center hover:bg-green-700 transition-colors"
+            >
+              📍 Check in to this event
+            </Link>
+          )}
+
           {/* Admin actions */}
           {isAdmin && (
             <div className="et-card p-5">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Admin</p>
               <div className="space-y-2">
+                <Link
+                  href={`/app/tables/${tableId}/events/${eventId}/checkin`}
+                  className="block w-full rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-center hover:bg-muted transition-colors"
+                >
+                  📋 Manage check-ins
+                </Link>
                 <Link
                   href={`/app/tables/${tableId}/events/${eventId}/record`}
                   className="block w-full rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-center hover:bg-muted transition-colors"

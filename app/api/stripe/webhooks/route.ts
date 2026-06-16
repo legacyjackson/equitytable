@@ -35,6 +35,10 @@ export async function POST(request: Request) {
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, supabase)
         break
 
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase)
+        break
+
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription, supabase)
@@ -310,4 +314,67 @@ async function handlePaymentFailed(
       icon: '⚠️',
     })
   }
+}
+
+// ── Handle goal contribution payment ─────────────────────────
+async function handlePaymentIntentSucceeded(
+  paymentIntent: Stripe.PaymentIntent,
+  supabase: Awaited<ReturnType<typeof createServiceClient>>
+) {
+  const meta = paymentIntent.metadata || {}
+  if (meta.type !== 'goal_contribution') return
+
+  const { goal_id, table_id, user_id, note } = meta
+  if (!goal_id || !user_id) return
+
+  const amountDollars = paymentIntent.amount_received / 100
+
+  // Record confirmed contribution
+  const { data: contrib } = await supabase
+    .from('goal_contributions')
+    .insert({
+      goal_id,
+      user_id,
+      amount: amountDollars,
+      contribution_type: 'stripe',
+      stripe_payment_intent_id: paymentIntent.id,
+      note: note || null,
+      status: 'confirmed',
+    })
+    .select('id')
+    .single()
+
+  if (!contrib) return
+
+  // Update goal current_value
+  await supabase.from('goal_updates').insert({
+    goal_id,
+    user_id,
+    update_value: amountDollars,
+    update_text: note || `Stripe contribution of $${amountDollars.toFixed(2)}`,
+  })
+
+  // Award badge + points
+  const { data: badge } = await supabase
+    .from('badges')
+    .select('id')
+    .eq('slug', 'community-investor')
+    .maybeSingle()
+
+  if (badge) {
+    await supabase.from('user_badges').insert({
+      user_id,
+      badge_id: badge.id,
+      table_id: table_id || null,
+    }).onConflict('user_id, badge_id, table_id').ignore()
+  }
+
+  await supabase.from('points_ledger').insert({
+    user_id,
+    table_id: table_id || null,
+    points: 50,
+    reason: 'Contributed to a goal via Stripe',
+    source_type: 'goal_contribution',
+    source_id: contrib.id,
+  })
 }

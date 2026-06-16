@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatRelativeTime, formatCurrency } from '@/lib/utils/format'
+import { Leaderboard } from '@/components/gamification/Leaderboard'
 
 interface TableDashboardPageProps {
   params: Promise<{ tableId: string }>
@@ -76,6 +77,38 @@ export default async function TableDashboardPage({ params }: TableDashboardPageP
       .eq('table_id', tableId)
       .eq('status', 'active'),
   ])
+
+  // Fetch leaderboard data separately (needs aggregation)
+  const { data: leaderboardRaw } = await supabase
+    .from('points_ledger')
+    .select('user_id, points')
+    .eq('table_id', tableId)
+
+  // Aggregate points per user
+  const pointsByUser: Record<string, number> = {}
+  for (const row of leaderboardRaw || []) {
+    pointsByUser[row.user_id] = (pointsByUser[row.user_id] || 0) + row.points
+  }
+  const topUserIds = Object.entries(pointsByUser)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([id]) => id)
+
+  const leaderboardEntries = topUserIds.length > 0
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', topUserIds)
+        .then(({ data }) => (data || []).map(p => ({
+          user_id: p.id,
+          full_name: p.full_name,
+          username: p.username,
+          avatar_url: p.avatar_url,
+          total_points: pointsByUser[p.id] || 0,
+          badges_count: 0,
+          lessons_completed: 0,
+        })).sort((a, b) => b.total_points - a.total_points))
+    : []
 
   if (!table) notFound()
 
@@ -359,6 +392,15 @@ export default async function TableDashboardPage({ params }: TableDashboardPageP
               </div>
             )}
           </div>
+
+          {/* Leaderboard */}
+          {(table as { leaderboard_enabled?: boolean }).leaderboard_enabled !== false && leaderboardEntries.length > 0 && (
+            <Leaderboard
+              entries={leaderboardEntries}
+              currentUserId={user.id}
+              enabled={true}
+            />
+          )}
 
           {/* Global Pathways CTA */}
           <div className="rounded-xl border border-gold-400/30 bg-gradient-to-br from-navy-500/5 to-blue-700/5 p-5">

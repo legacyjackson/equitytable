@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatEventDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
+import { EmptyState } from '@/components/common/EmptyState'
+import { PageHeader } from '@/components/common/PageHeader'
 
 interface EventsPageProps {
   params: Promise<{ tableId: string }>
@@ -69,20 +71,18 @@ export default async function EventsPage({ params }: EventsPageProps) {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-navy-500 tracking-tight">Events</h1>
-          <p className="text-muted-foreground mt-1">Equity Events — classes, workshops, and meetups.</p>
-        </div>
-        {isFacilitator && (
+      <PageHeader
+        title="Events"
+        description="Equity Events — classes, workshops, meetups, and more."
+        actions={isFacilitator ? (
           <Link
             href={`/app/tables/${tableId}/events/new`}
-            className="rounded-xl bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors shrink-0"
+            className="rounded-xl bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
           >
             + Create event
           </Link>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* Upcoming */}
       <section>
@@ -91,18 +91,12 @@ export default async function EventsPage({ params }: EventsPageProps) {
         </h2>
 
         {!upcoming || upcoming.length === 0 ? (
-          <div className="et-card p-10 text-center">
-            <div className="text-4xl mb-3">📅</div>
-            <h3 className="font-display text-lg font-semibold text-navy-500 mb-2">No upcoming events</h3>
-            <p className="text-muted-foreground text-sm">
-              {isFacilitator ? 'Host your first Equity Event to bring the table together.' : 'No events scheduled yet.'}
-            </p>
-            {isFacilitator && (
-              <Link href={`/app/tables/${tableId}/events/new`} className="inline-flex mt-4 text-sm font-semibold text-blue-600 hover:underline">
-                Create an event →
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            icon="📅"
+            title="No upcoming events"
+            description={isFacilitator ? 'Host your first Equity Event to bring the table together.' : 'No events scheduled yet.'}
+            action={isFacilitator ? { label: 'Create an event', href: `/app/tables/${tableId}/events/new` } : undefined}
+          />
         ) : (
           <div className="space-y-3">
             {upcoming.map(event => (

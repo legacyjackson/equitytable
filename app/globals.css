@@ -207,4 +207,51 @@
     background-color: hsl(var(--border));
     border-radius: 2px;
   }
+
+  /* Safe area insets — iOS notch/home indicator */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Touch-friendly tap targets — minimum 44px on mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile: prevent text overflow in flex containers */
+  .min-w-0-mobile {
+    min-width: 0;
+  }
+
+  /* Remove tap highlight on mobile */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  @media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="url"],
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
+  /* Print styles — used by QR check-in and lesson print */
+  @media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    body { background: white !important; }
+    .et-card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+  }
 }

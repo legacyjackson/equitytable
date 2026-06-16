@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatMinutes } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
+import { EmptyState } from '@/components/common/EmptyState'
+import { PageHeader } from '@/components/common/PageHeader'
 
 interface CoursesPageProps {
   params: Promise<{ tableId: string }>
@@ -78,14 +80,10 @@ export default async function CoursesPage({ params }: CoursesPageProps) {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-navy-500 tracking-tight">
-          Course library
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {courses?.length ?? 0} courses · Learn together, build together.
-        </p>
-      </div>
+      <PageHeader
+        title="Course library"
+        description={`${filteredCourses.length} course${filteredCourses.length !== 1 ? 's' : ''} · ${completed} completed · ${inProgress.length} in progress`}
+      />
 
       {/* Continue learning */}
       {inProgress.length > 0 && (
@@ -128,13 +126,12 @@ export default async function CoursesPage({ params }: CoursesPageProps) {
       ))}
 
       {(!courses || courses.length === 0) && (
-        <div className="text-center py-20 et-card">
-          <div className="text-4xl mb-3">📚</div>
-          <h2 className="font-display text-xl font-semibold text-navy-500 mb-2">
-            Courses are being added
-          </h2>
-          <p className="text-muted-foreground text-sm">Check back soon — more courses are on the way.</p>
-        </div>
+        <EmptyState
+          icon="📚"
+          title="Courses coming soon"
+          description="The course library is being built. Check back soon — more courses are on the way."
+          size="lg"
+        />
       )}
     </div>
   )

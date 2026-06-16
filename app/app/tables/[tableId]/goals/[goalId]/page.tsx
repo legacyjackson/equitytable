@@ -117,6 +117,30 @@ export default async function GoalPage({ params }: GoalPageProps) {
         </div>
       </div>
 
+      {/* Contribute button — shown when goal accepts contributions */}
+      {isMember && goal.accept_contributions && goal.status === 'active' && (
+        <div className="et-card p-5 mb-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-navy-500">
+                {goal.contribution_type === 'stripe' ? '💳 Contribute via Stripe' :
+                 goal.contribution_type === 'pledge' ? '🤝 Pledge your support' :
+                 '📝 Record a contribution'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Help move this goal forward.
+              </p>
+            </div>
+            <Link
+              href={`/app/tables/${tableId}/goals/${goalId}/contribute`}
+              className="rounded-xl bg-navy-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-navy-600 transition-colors shrink-0"
+            >
+              Contribute →
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Update form (client) */}
       {isMember && goal.status === 'active' && (
         <GoalUpdateClient
