@@ -1,46 +1,46 @@
+'use client'
 
-
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/lib/supabase/client'
 import { updateProfileSchema, type UpdateProfileInput } from '@/lib/validations'
 import { cn } from '@/lib/utils/cn'
 
-// Server component wrapper
-export const dynamic = 'force-dynamic'
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<any>(null)
+  const [badges, setBadges] = useState<any[]>([])
+  const [totalPoints, setTotalPoints] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-import { redirect } from 'next/navigation'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) window.location.href = '/auth/sign-in'
 
-export default async function ProfilePage() {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      const { data: badges } = await supabase
+        .from('user_badges')
+        .select('*, badges(name, slug, icon, description, points)')
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false })
+      const { data: pointsData } = await supabase.from('points_ledger').select('points').eq('user_id', user.id)
+      const totalPoints = pointsData?.reduce((sum, row) => sum + (row.points ?? 0), 0) ?? 0
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+      setProfile(profile)
+      setBadges(badges ?? [])
+      setTotalPoints(totalPoints)
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
 
-  const { data: badges } = await supabase
-    .from('user_badges')
-    .select('*, badges(name, slug, icon, description, points)')
-    .eq('user_id', user.id)
-    .order('earned_at', { ascending: false })
+  if (loading) return <div className="p-8">Loading…</div>
 
-  const { data: pointsData } = await supabase
-    .from('points_ledger')
-    .select('points')
-    .eq('user_id', user.id)
-
-  const totalPoints = pointsData?.reduce((sum, row) => sum + (row.points ?? 0), 0) ?? 0
-
-  return <ProfileClient profile={profile} badges={badges ?? []} totalPoints={totalPoints} />
+  return <ProfileClient profile={profile} badges={badges} totalPoints={totalPoints} />
 }
 
-// Client component for interactive form
 function ProfileClient({
   profile,
   badges,
@@ -56,11 +56,7 @@ function ProfileClient({
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isDirty },
-  } = useForm<UpdateProfileInput>({
+  const { register, handleSubmit, formState: { errors, isDirty } } = useForm<UpdateProfileInput>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
       full_name: profile?.full_name ?? '',
@@ -75,17 +71,13 @@ function ProfileClient({
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
-
     try {
       const supabase = createClient()
       const ext = file.name.split('.').pop()
       const path = `avatars/${profile.id}/${Date.now()}.${ext}`
-
       const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
       if (error) throw error
-
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
       setAvatarUrl(publicUrl)
     } catch (err) {
@@ -98,14 +90,9 @@ function ProfileClient({
   const onSubmit = async (data: UpdateProfileInput) => {
     setSaving(true)
     setSuccess(false)
-
     try {
       const supabase = createClient()
-      const { error } = await supabase
-        .from('profiles')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', profile.id)
-
+      const { error } = await supabase.from('profiles').update({ ...data, updated_at: new Date().toISOString() }).eq('id', profile.id)
       if (error) throw error
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -123,17 +110,12 @@ function ProfileClient({
         <p className="text-muted-foreground mt-1">Manage how you appear to your table members.</p>
       </div>
 
-      {/* Avatar */}
       <div className="et-card p-6">
         <h2 className="font-display font-semibold text-navy-500 mb-4">Profile photo</h2>
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
             {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Your avatar"
-                className="w-20 h-20 rounded-full object-cover border-2 border-border"
-              />
+              <img src={avatarUrl} alt="Your avatar" className="w-20 h-20 rounded-full object-cover border-2 border-border" />
             ) : (
               <div className="w-20 h-20 rounded-full bg-navy-100 flex items-center justify-center text-2xl font-bold text-navy-500 border-2 border-border">
                 {(profile?.full_name ?? profile?.email ?? '?').charAt(0).toUpperCase()}
@@ -146,18 +128,8 @@ function ProfileClient({
             )}
           </div>
           <div>
-            <input
-              type="file"
-              ref={fileRef}
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
-            >
+            <input type="file" ref={fileRef} accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
               {uploading ? 'Uploading…' : 'Upload photo'}
             </button>
             <p className="text-xs text-muted-foreground mt-1.5">JPG, PNG, or WebP · Max 5MB</p>
@@ -165,33 +137,20 @@ function ProfileClient({
         </div>
       </div>
 
-      {/* Profile form */}
       <div className="et-card p-6">
         <h2 className="font-display font-semibold text-navy-500 mb-5">Profile details</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Full name</label>
-              <input
-                {...register('full_name')}
-                className={cn(
-                  'w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors',
-                  errors.full_name ? 'border-red-300' : 'border-border'
-                )}
-              />
+              <input {...register('full_name')} className={cn('w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors', errors.full_name ? 'border-red-300' : 'border-border')} />
               {errors.full_name && <p className="mt-1 text-xs text-red-600">{errors.full_name.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
-                <input
-                  {...register('username')}
-                  className={cn(
-                    'w-full rounded-lg border px-3.5 py-2.5 pl-7 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors',
-                    errors.username ? 'border-red-300' : 'border-border'
-                  )}
-                />
+                <input {...register('username')} className={cn('w-full rounded-lg border px-3.5 py-2.5 pl-7 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors', errors.username ? 'border-red-300' : 'border-border')} />
               </div>
               {errors.username && <p className="mt-1 text-xs text-red-600">{errors.username.message}</p>}
             </div>
@@ -199,33 +158,19 @@ function ProfileClient({
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Bio</label>
-            <textarea
-              {...register('bio')}
-              rows={3}
-              placeholder="Share a bit about yourself and your financial journey"
-              className={cn(
-                'w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors resize-none',
-                errors.bio ? 'border-red-300' : 'border-border'
-              )}
-            />
+            <textarea {...register('bio')} rows={3} placeholder="Share a bit about yourself and your financial journey" className={cn('w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors resize-none', errors.bio ? 'border-red-300' : 'border-border')} />
             {errors.bio && <p className="mt-1 text-xs text-red-600">{errors.bio.message}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Location</label>
-            <input
-              {...register('location')}
-              placeholder="City, State"
-              className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
-            />
+            <input {...register('location')} placeholder="City, State" className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors" />
           </div>
 
           <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
             <div>
               <p className="text-sm font-medium text-foreground">Public profile</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Let anyone view your profile page and badges
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Let anyone view your profile page and badges</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input type="checkbox" {...register('public_profile')} className="peer sr-only" />
@@ -239,24 +184,17 @@ function ProfileClient({
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={saving || !isDirty}
-            className="w-full rounded-lg bg-navy-500 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving || !isDirty} className="w-full rounded-lg bg-navy-500 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors disabled:opacity-50">
             {saving ? 'Saving…' : 'Save changes'}
           </button>
         </form>
       </div>
 
-      {/* Badges */}
       {badges.length > 0 && (
         <div className="et-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-semibold text-navy-500">Badges earned</h2>
-            <span className="badge-pill bg-gold-100 text-gold-700">
-              {totalPoints} XP
-            </span>
+            <span className="badge-pill bg-gold-100 text-gold-700">{totalPoints} XP</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {badges.map((ub: any) => {
