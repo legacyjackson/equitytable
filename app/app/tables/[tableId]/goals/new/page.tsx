@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -22,8 +23,9 @@ const GOAL_TYPES = [
   { value: 'custom', label: '✏️ Custom goal', metric: 'units' },
 ]
 
-export default function CreateGoalPage({ params }: { params: { tableId: string } }) {
-  const tableId = (params as any).tableId
+export default function CreateGoalPage() {
+  const params = useParams()
+  const tableId = params.tableId as string
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
