@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -8,15 +9,9 @@ import { createClient } from '@/lib/supabase/client'
 import { createEventSchema, type CreateEventInput } from '@/lib/validations'
 import { cn } from '@/lib/utils/cn'
 
-// The page is a client component because we need the router after creation
-// For a large form like this, that's the right call
-export default function CreateEventPage({
-  params,
-}: {
-  params: { tableId: string }
-}) {
-  // params is always available synchronously in client components
-  const tableId = (params as any).tableId
+export default function CreateEventPage() {
+  const params = useParams()
+  const tableId = params.tableId as string
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
