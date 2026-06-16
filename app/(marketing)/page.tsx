@@ -59,13 +59,13 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href="/auth/sign-in"
+                href="/sign-in"
                 className="hidden sm:inline-flex text-sm font-semibold text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors"
               >
                 Sign in
               </Link>
               <Link
-                href="/auth/sign-up"
+                href="/sign-up"
                 className="inline-flex items-center rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors shadow-sm"
               >
                 Start an Equity Table
