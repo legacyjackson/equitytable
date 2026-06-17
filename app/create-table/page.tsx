@@ -73,10 +73,29 @@ export default function CreateTablePage() {
         }),
       })
 
-      const { url, error: checkoutError } = await checkoutRes.json()
+      const result = await checkoutRes.json()
 
-      if (checkoutError) throw new Error(checkoutError)
-      if (url) window.location.href = url
+      // If user has active subscription and no extra seats, create table immediately
+      if (result.skipPayment) {
+        // Create table directly via server action
+        const createRes = await fetch('/api/tables/create-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tableSetup: result.tableSetup,
+            userId: result.userId,
+          }),
+        })
+
+        const tableData = await createRes.json()
+        if (tableData.error) throw new Error(tableData.error)
+        window.location.href = `/app/tables/${tableData.table_id}`
+      } else if (result.url) {
+        // Send to Stripe checkout
+        window.location.href = result.url
+      } else {
+        throw new Error(result.error || 'Something went wrong')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoading(false)
