@@ -142,8 +142,6 @@ const nextConfig: NextConfig = {
   // ========================================
   // PRODUCTION OPTIMIZATIONS
   // ========================================
-  swcMinify: true,
-  compress: true,
 
   // ========================================
   // REACT STRICT MODE
