@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/brand/Logo'
 import { createTableSchema, type CreateTableInput } from '@/lib/validations'
 import { cn } from '@/lib/utils/cn'
+import { createClient } from '@/lib/supabase/client'
 
 // Table type options — matches seed data
 const TABLE_TYPES = [
@@ -31,11 +32,17 @@ const STEPS = ['Choose type', 'Table details', 'Review']
 
 export default function CreateTablePage() {
   const router = useRouter()
+  const supabase = createClient()
   const [step, setStep] = useState(0)
   const [selectedType, setSelectedType] = useState<typeof TABLE_TYPES[0] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [additionalSeats, setAdditionalSeats] = useState(0)
+  const [userStats, setUserStats] = useState<{
+    tablesOwned: number
+    memberOfCount: number
+    canCreate: boolean
+  } | null>(null)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CreateTableInput>({
     resolver: zodResolver(createTableSchema),
@@ -43,21 +50,64 @@ export default function CreateTablePage() {
   })
 
   const name = watch('name')
-  const seatsTotal = 1 + additionalSeats // 1 owner + additional seats
-  const seatsCost = additionalSeats * 4.99 // $4.99 per additional seat/month
+  const totalSeats = 10 + additionalSeats
+  const extraSeatsCost = additionalSeats * 4.99
+  const totalMonthly = additionalSeats > 0 ? 49.99 + extraSeatsCost : 49.99
+
+  // Load user's table stats on mount
+  useEffect(() => {
+    loadUserStats()
+  }, [])
+
+  const loadUserStats = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Count tables user OWNS
+    const { data: ownedTables } = await supabase
+      .from('equity_tables')
+      .select('id')
+      .eq('owner_id', user.id)
+
+    const tablesOwned = ownedTables?.length || 0
+
+    // Count tables user is a MEMBER of (but doesn't own)
+    const { data: memberTables } = await supabase
+      .from('table_memberships')
+      .select('table_id, role')
+      .eq('user_id', user.id)
+      .neq('role', 'owner')
+
+    const memberOfCount = memberTables?.length || 0
+
+    // Can create if:
+    // - Member of < 3 tables (can join up to 3)
+    // - OR they own at least 1 table (owners can create multiple)
+    const canCreate = memberOfCount < 3 || tablesOwned > 0
+
+    setUserStats({
+      tablesOwned,
+      memberOfCount,
+      canCreate,
+    })
+  }
 
   const handleTypeSelect = (type: typeof TABLE_TYPES[0]) => {
+    if (!userStats?.canCreate) {
+      setError('You are already a member of 3 tables. Please leave a table before creating a new one.')
+      return
+    }
     setSelectedType(type)
     setStep(1)
   }
 
   const onSubmit = async (data: CreateTableInput) => {
-    if (!selectedType) return
+    if (!selectedType || !userStats) return
     setLoading(true)
     setError(null)
 
     try {
-      // We need the actual UUID for the table type — fetch it
+      // Fetch table type UUID
       const response = await fetch('/api/table-types/' + selectedType.id)
       const typeData = await response.json()
 
@@ -70,20 +120,22 @@ export default function CreateTablePage() {
             table_type_id: typeData.id,
           },
           additionalSeats: additionalSeats,
+          tablesOwned: userStats.tablesOwned,
+          memberOfCount: userStats.memberOfCount,
         }),
       })
 
       const result = await checkoutRes.json()
 
-      // If user has active subscription and no extra seats, create table immediately
       if (result.skipPayment) {
-        // Create table directly via server action
+        // Create table directly
         const createRes = await fetch('/api/tables/create-direct', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tableSetup: result.tableSetup,
             userId: result.userId,
+            additionalSeats: additionalSeats,
           }),
         })
 
@@ -91,7 +143,6 @@ export default function CreateTablePage() {
         if (tableData.error) throw new Error(tableData.error)
         window.location.href = `/app/tables/${tableData.table_id}`
       } else if (result.url) {
-        // Send to Stripe checkout
         window.location.href = result.url
       } else {
         throw new Error(result.error || 'Something went wrong')
@@ -144,12 +195,24 @@ export default function CreateTablePage() {
                 This shapes your recommended courses, goals, and content.
               </p>
 
+              {!userStats?.canCreate && (
+                <div className="mb-6 rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
+                  You are a member of {userStats?.memberOfCount} tables. Members can only join up to 3 tables. Please leave a table before creating a new one.
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {TABLE_TYPES.map((type) => (
                   <button
                     key={type.id}
                     onClick={() => handleTypeSelect(type)}
-                    className="text-left p-4 rounded-xl border-2 border-border hover:border-blue-600 hover:bg-blue-50 transition-all group"
+                    disabled={!userStats?.canCreate}
+                    className={cn(
+                      'text-left p-4 rounded-xl border-2 border-border transition-all group',
+                      userStats?.canCreate 
+                        ? 'hover:border-blue-600 hover:bg-blue-50 cursor-pointer' 
+                        : 'opacity-50 cursor-not-allowed'
+                    )}
                   >
                     <div className="flex items-center gap-3 mb-1">
                       <span className="text-xl">{type.emoji}</span>
@@ -223,9 +286,23 @@ export default function CreateTablePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Additional seats (optional)
+                    Visibility
                   </label>
-                  <p className="text-xs text-muted-foreground mb-3">You get 1 owner seat + add members at $4.99/month each (up to 5 total)</p>
+                  <select
+                    {...register('visibility')}
+                    className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
+                  >
+                    <option value="public">Public — anyone can see your table profile</option>
+                    <option value="private">Private — only members can see content</option>
+                    <option value="invite_only">Invite only — members join by invitation only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Total seats (optional)
+                  </label>
+                  <p className="text-xs text-muted-foreground mb-3">First 10 seats included. Extra seats at $4.99/month each</p>
                   <div className="flex items-center gap-4">
                     <input
                       type="range"
@@ -236,13 +313,13 @@ export default function CreateTablePage() {
                       className="flex-1"
                     />
                     <div className="text-right min-w-[80px]">
-                      <p className="text-lg font-bold text-navy-500">{seatsTotal}</p>
+                      <p className="text-lg font-bold text-navy-500">{totalSeats}</p>
                       <p className="text-xs text-muted-foreground">total seats</p>
                     </div>
                   </div>
                   {additionalSeats > 0 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      + ${seatsCost.toFixed(2)}/month for extra seats
+                      + ${extraSeatsCost.toFixed(2)}/month for {additionalSeats} extra seats
                     </p>
                   )}
                 </div>
@@ -253,11 +330,13 @@ export default function CreateTablePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-navy-500">Equity Table subscription</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{seatsTotal} seats · {additionalSeats} extra at $4.99 each</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {totalSeats} seats ({additionalSeats > 0 ? `10 included + ${additionalSeats} extra` : '10 included'})
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-display font-bold text-navy-500">
-                      ${(49.99 + seatsCost).toFixed(2)}
+                      ${totalMonthly.toFixed(2)}
                     </p>
                     <p className="text-xs text-muted-foreground">per month</p>
                   </div>
@@ -276,7 +355,7 @@ export default function CreateTablePage() {
           )}
 
           {/* Step 2: Review + checkout */}
-          {step === 2 && selectedType && (
+          {step === 2 && selectedType && userStats && (
             <div className="p-8">
               <button
                 onClick={() => setStep(1)}
@@ -298,6 +377,10 @@ export default function CreateTablePage() {
                   <p className="text-xs text-muted-foreground">Table name</p>
                   <p className="font-semibold text-navy-500">{name || '—'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total seats</p>
+                  <p className="font-semibold text-navy-500">{totalSeats}</p>
+                </div>
               </div>
 
               {error && (
@@ -307,13 +390,26 @@ export default function CreateTablePage() {
               )}
 
               <div className="rounded-xl bg-[#F8FAFF] border border-border p-5 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold">Equity Table — Monthly</p>
-                  <p className="text-sm font-bold text-navy-500">$49.99</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">Equity Table (10 seats included)</p>
+                    <p className="text-sm font-bold text-navy-500">$49.99</p>
+                  </div>
+                  {additionalSeats > 0 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">Extra seats ({additionalSeats})</p>
+                      <p className="text-sm font-bold text-navy-500">+${extraSeatsCost.toFixed(2)}</p>
+                    </div>
+                  )}
+                  <div className="border-t border-border pt-2 flex items-center justify-between">
+                    <p className="text-sm font-bold">Monthly total</p>
+                    <p className="text-lg font-bold text-navy-500">${totalMonthly.toFixed(2)}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  10 seats included. You'll be taken to Stripe's secure checkout to enter your payment details.
-                  Cancel anytime.
+                <p className="text-xs text-muted-foreground mt-3">
+                  {userStats.tablesOwned === 0 && userStats.memberOfCount < 3
+                    ? 'Your first table is free with your $49.99/month subscription. Additional tables cost $49.99 each.'
+                    : 'Creating a new table costs $49.99/month. Cancel anytime.'}
                 </p>
               </div>
 
@@ -326,7 +422,7 @@ export default function CreateTablePage() {
                   'disabled:opacity-60 disabled:cursor-not-allowed'
                 )}
               >
-                {loading ? 'Setting up checkout…' : 'Proceed to checkout — $49.99/month'}
+                {loading ? 'Setting up checkout…' : `Proceed to checkout — $${totalMonthly.toFixed(2)}/month`}
               </button>
 
               <p className="mt-4 text-xs text-muted-foreground text-center">
