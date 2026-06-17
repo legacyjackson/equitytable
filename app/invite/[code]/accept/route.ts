@@ -6,8 +6,10 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 // User accepts invite and joins table
 export async function POST(
   request: Request,
-  { params }: { params: { code: string } }
-) {
+  { params }: { params: Promise<{ code: string }> }  // ✅ CORRECT
+)
+{
+  const { code } = await params  // ← Must await it! {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
