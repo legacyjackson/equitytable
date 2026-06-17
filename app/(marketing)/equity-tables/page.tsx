@@ -47,11 +47,14 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
   // Client-side filter for type (Supabase join filtering is limited)
   let tables = tablesResult.data || []
   if (type) {
-    tables = tables.filter(t => {
-      const tt = t.table_type as { slug: string } | null
-      return tt?.slug === type
-    })
-  }
+  tables = tables.filter(t => {
+    // Supabase joins can return an array or a single object
+    const tt = Array.isArray(t.table_type)
+      ? t.table_type[0]
+      : t.table_type
+    return (tt as { slug?: string } | null)?.slug === type
+  })
+}
   if (q) {
     tables = tables.filter(t =>
       t.name.toLowerCase().includes(q.toLowerCase()) ||
