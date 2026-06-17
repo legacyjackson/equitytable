@@ -16,7 +16,6 @@ export default async function AdminUsersPage({
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) redirect('/sign-in')
 
-  // Check if admin
   const { data: myRoles } = await authClient
     .from('platform_roles')
     .select('role')
@@ -29,15 +28,28 @@ export default async function AdminUsersPage({
   const from = (pageNum - 1) * perPage
   const to = from + perPage - 1
 
-  // Use service client
   const svc = await createServiceClient()
 
-  // Simple query — no nested embeds
-  const { data: profiles, count } = await svc
-    .from('profiles')
-    .select('id, email, full_name, username, created_at', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to)
+  let profiles: any[] | null = null
+  let count: number | null = null
+  let error: string | null = null
+
+  try {
+    const result = await svc
+      .from('profiles')
+      .select('id, email, full_name, username, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    
+    profiles = result.data
+    count = result.count
+    
+    if (result.error) {
+      error = result.error.message
+    }
+  } catch (err) {
+    error = String(err)
+  }
 
   const totalPages = Math.ceil((count || 0) / perPage)
 
@@ -46,9 +58,16 @@ export default async function AdminUsersPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-navy-500">Users</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{count?.toLocaleString()} total</p>
+          <p className="text-muted-foreground text-sm mt-0.5">{count?.toLocaleString() || '0'} total</p>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <p className="text-red-700 font-semibold">❌ Error:</p>
+          <p className="text-red-600 text-sm font-mono">{error}</p>
+        </div>
+      )}
 
       <div className="et-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -63,18 +82,18 @@ export default async function AdminUsersPage({
             </thead>
             <tbody className="divide-y divide-border">
               {(profiles || []).length > 0 ? (
-                profiles.map(user => (
-                  <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-sm text-navy-500 font-medium">{user.email}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{user.full_name || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">@{user.username}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(user.created_at)}</td>
+                profiles.map(u => (
+                  <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 text-sm text-navy-500 font-medium">{u.email}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{u.full_name || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">@{u.username}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(u.created_at)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    No users found
+                    {error ? 'Error loading users' : 'No users found'}
                   </td>
                 </tr>
               )}
