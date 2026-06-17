@@ -105,7 +105,8 @@ export async function GET(request: Request) {
 
     const courseMap: Record<string, { title: string; count: number }> = {}
     courseCounts?.forEach(c => {
-      const title = c.courses?.title || 'Unknown'
+      const courseRel = Array.isArray(c.courses) ? c.courses[0] : c.courses
+      const title = courseRel?.title || 'Unknown'
       if (!courseMap[title]) {
         courseMap[title] = { title, count: 0 }
       }
@@ -125,7 +126,8 @@ export async function GET(request: Request) {
 
     const typeMap: Record<string, { name: string; count: number }> = {}
     tablesByType?.forEach(t => {
-      const name = t.equity_table_types?.name || 'Unknown'
+      const typeRel = Array.isArray(t.equity_table_types) ? t.equity_table_types[0] : t.equity_table_types
+      const name = typeRel?.name || 'Unknown'
       if (!typeMap[name]) {
         typeMap[name] = { name, count: 0 }
       }
