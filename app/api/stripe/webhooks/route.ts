@@ -317,7 +317,8 @@ async function handlePaymentFailed(
   if (!sub?.table_id) return
 
   // Notify the owner
-  const ownerId = (sub.table as { owner_id: string } | null)?.owner_id
+  const tableRel = Array.isArray(sub.table) ? sub.table[0] : sub.table
+  const ownerId = (tableRel as { owner_id: string } | null)?.owner_id
   if (ownerId) {
     await supabase.from('notifications').insert({
       user_id: ownerId,
