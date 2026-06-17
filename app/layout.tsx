@@ -1,14 +1,3 @@
-<head>
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#1e3a5f" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Equity Table" />
-  <link rel="apple-touch-icon" href="/icon-192.png" />
-  
-  {/* Your other existing head content here */}
-</head>
-
 import type { Metadata, Viewport } from 'next'
 import { Inter, DM_Sans } from 'next/font/google'
 import './globals.css'
@@ -35,11 +24,16 @@ export const metadata: Metadata = {
     "Equity Table helps families, organizations, ministries, businesses, and communities learn financial literacy together, host events, track goals, and take action when they're ready.",
   keywords: ['financial literacy', 'community finance', 'wealth building', 'equity table', 'global pathways'],
   authors: [{ name: 'Equity Table' }],
-  // Favicon = logo-light.png (white background logo mark)
+  manifest: '/manifest.json', // ← PWA
+  appleWebApp: { // ← PWA
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Equity Table',
+  },
   icons: {
     icon: '/logo-light.png',
     shortcut: '/logo-light.png',
-    apple: '/logo-light.png',
+    apple: '/icon-192.png', // ← PWA
   },
   openGraph: {
     title: 'Equity Table — Build wealth with the people you trust.',
@@ -57,7 +51,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0F1F4B',
+  themeColor: '#1e3a5f', // ← Updated to match PWA color
   width: 'device-width',
   initialScale: 1,
 }
