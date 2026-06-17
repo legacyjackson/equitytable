@@ -1,23 +1,22 @@
-// app/api/tables/[tableId]/invites/route.ts
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import crypto from 'crypto'
 
-// GET /api/tables/[tableId]/invites
+// GET /api/tables/[tableId]/invite
 // List all active invites for a table
 export async function GET(
   request: Request,
-  { params }: { params: { tableId: string } }
+  { params }: { params: Promise<{ tableId: string }> }
 ) {
   try {
+    const { tableId } = await params
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { tableId } = params
 
     // Check user owns this table
     const { data: table } = await supabase
@@ -33,25 +32,27 @@ export async function GET(
     const svc = await createServiceClient()
     const { data: invites } = await svc
       .from('table_invites')
-      .select('id, code, email, created_at, status, claimed_by')
+      .select('id, code, email, created_at, status, claimed_by, invite_link')
       .eq('table_id', tableId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
 
-    return NextResponse.json({ invites })
+    return NextResponse.json({ invites: invites || [] })
   } catch (error) {
     console.error('Fetch invites error:', error)
     return NextResponse.json({ error: 'Failed to fetch invites' }, { status: 500 })
   }
 }
 
-// POST /api/tables/[tableId]/invites
-// Create a new invite link or email invite
+// POST /api/tables/[tableId]/invite
+// Create a new invite link
 export async function POST(
   request: Request,
-  { params }: { params: { tableId: string } }
+  { params }: { params: Promise<{ tableId: string }> }
 ) {
   try {
+    const { tableId } = await params
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -59,9 +60,8 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { tableId } = params
     const body = await request.json()
-    const { email, type = 'link' } = body // type: 'link' or 'email'
+    const { email, type = 'link' } = body
 
     // Check user owns this table
     const { data: table } = await supabase
@@ -81,7 +81,6 @@ export async function POST(
 
     const svc = await createServiceClient()
 
-    // Create invite record
     const { data: invite, error: inviteError } = await svc
       .from('table_invites')
       .insert({
@@ -99,12 +98,6 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
     }
 
-    // If email type, send email notification (implement with Resend/SendGrid)
-    if (type === 'email' && email) {
-      // TODO: Send email to user with invite link
-      // await sendInviteEmail(email, table.name, inviteLink, user.full_name)
-    }
-
     return NextResponse.json({
       invite: {
         id: invite.id,
@@ -120,13 +113,15 @@ export async function POST(
   }
 }
 
-// DELETE /api/tables/[tableId]/invites/[inviteId]
-// Revoke an invite
+// DELETE /api/tables/[tableId]/invite
+// Revoke an invite (pass inviteId in body)
 export async function DELETE(
   request: Request,
-  { params }: { params: { tableId: string } }
+  { params }: { params: Promise<{ tableId: string }> }
 ) {
   try {
+    const { tableId } = await params
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -134,9 +129,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { tableId } = params
-    const url = new URL(request.url)
-    const inviteId = url.pathname.split('/').pop()
+    const body = await request.json()
+    const { inviteId } = body
 
     // Check user owns this table
     const { data: table } = await supabase
