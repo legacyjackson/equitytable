@@ -52,14 +52,17 @@ export default function AppHomePage() {
         .eq('status', 'published')
         .limit(8)
 
-      setCourses(allCourses?.map(c => ({
-        id: c.id,
-        title: c.title,
-        category: c.course_categories?.name || 'General',
-        description: c.description,
-        estimated_minutes: c.estimated_minutes,
-        thumbnail_url: c.thumbnail_url,
-      })) || [])
+      setCourses(allCourses?.map(c => {
+        const cat = Array.isArray(c.course_categories) ? c.course_categories[0] : c.course_categories
+        return {
+          id: c.id,
+          title: c.title,
+          category: cat?.name || 'General',
+          description: c.description,
+          estimated_minutes: c.estimated_minutes,
+          thumbnail_url: c.thumbnail_url,
+        }
+      }) || [])
 
       // Get user stats
       const { data: courseProgress } = await supabase
