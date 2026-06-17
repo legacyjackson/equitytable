@@ -35,6 +35,7 @@ export default function CreateTablePage() {
   const [selectedType, setSelectedType] = useState<typeof TABLE_TYPES[0] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [additionalSeats, setAdditionalSeats] = useState(0)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CreateTableInput>({
     resolver: zodResolver(createTableSchema),
@@ -42,6 +43,8 @@ export default function CreateTablePage() {
   })
 
   const name = watch('name')
+  const seatsTotal = 1 + additionalSeats // 1 owner + additional seats
+  const seatsCost = additionalSeats * 4.99 // $4.99 per additional seat/month
 
   const handleTypeSelect = (type: typeof TABLE_TYPES[0]) => {
     setSelectedType(type)
@@ -66,6 +69,7 @@ export default function CreateTablePage() {
             ...data,
             table_type_id: typeData.id,
           },
+          additionalSeats: additionalSeats,
         }),
       })
 
@@ -200,16 +204,28 @@ export default function CreateTablePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Visibility
+                    Additional seats (optional)
                   </label>
-                  <select
-                    {...register('visibility')}
-                    className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition-colors"
-                  >
-                    <option value="public">Public — anyone can see your table profile</option>
-                    <option value="private">Private — only members can see content</option>
-                    <option value="invite_only">Invite only — members join by invitation only</option>
-                  </select>
+                  <p className="text-xs text-muted-foreground mb-3">You get 1 owner seat + add members at $4.99/month each (up to 5 total)</p>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="0"
+                      max="4"
+                      value={additionalSeats}
+                      onChange={(e) => setAdditionalSeats(parseInt(e.target.value))}
+                      className="flex-1"
+                    />
+                    <div className="text-right min-w-[80px]">
+                      <p className="text-lg font-bold text-navy-500">{seatsTotal}</p>
+                      <p className="text-xs text-muted-foreground">total seats</p>
+                    </div>
+                  </div>
+                  {additionalSeats > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      + ${seatsCost.toFixed(2)}/month for extra seats
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -218,10 +234,12 @@ export default function CreateTablePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-navy-500">Equity Table subscription</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">10 seats included · Add more at $4.99/seat</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{seatsTotal} seats · {additionalSeats} extra at $4.99 each</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-display font-bold text-navy-500">$49.99</p>
+                    <p className="text-xl font-display font-bold text-navy-500">
+                      ${(49.99 + seatsCost).toFixed(2)}
+                    </p>
                     <p className="text-xs text-muted-foreground">per month</p>
                   </div>
                 </div>
