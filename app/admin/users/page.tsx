@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils/format'
+import { UserActionsCell } from '@/components/admin/UserActionsCell'
 
 export const metadata = { title: 'Users — Admin' }
 export const dynamic = 'force-dynamic'
@@ -30,28 +31,39 @@ export default async function AdminUsersPage({
 
   const svc = await createServiceClient()
 
-  let profiles: any[] | null = null
-  let count: number | null = null
-  let error: string | null = null
+  // Fetch users
+  const { data: profiles, count } = await svc
+    .from('profiles')
+    .select('id, email, full_name, username, created_at, license_tier', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
 
-  try {
-    const result = await svc
-      .from('profiles')
-      .select('id, email, full_name, username, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to)
-    
-    profiles = result.data
-    count = result.count
-    
-    if (result.error) {
-      error = result.error.message
-    }
-  } catch (err) {
-    error = String(err)
+  // Fetch all tables for dropdown
+  const { data: tables } = await svc.from('equity_tables').select('id, name')
+
+  // Fetch table memberships for all users on this page
+  const userIds = (profiles || []).map(p => p.id)
+  let membershipsByUser: Record<string, any[]> = {}
+
+  if (userIds.length > 0) {
+    const { data: memberships } = await svc
+      .from('table_memberships')
+      .select('id, user_id, table_id, role, status')
+      .in('user_id', userIds)
+
+    memberships?.forEach(m => {
+      if (!membershipsByUser[m.user_id]) membershipsByUser[m.user_id] = []
+      membershipsByUser[m.user_id].push(m)
+    })
   }
 
   const totalPages = Math.ceil((count || 0) / perPage)
+
+  const tierLabels: Record<string, string> = {
+    'free': 'Free',
+    'seat': '$4.99/mo',
+    'owner': '$49.99/mo',
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -62,38 +74,44 @@ export default async function AdminUsersPage({
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-          <p className="text-red-700 font-semibold">❌ Error:</p>
-          <p className="text-red-600 text-sm font-mono">{error}</p>
-        </div>
-      )}
-
       <div className="et-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left">
+              <tr className="border-b border-border text-left bg-muted/50">
                 <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Email</th>
                 <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Username</th>
                 <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Joined</th>
+                <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">License & Tables</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {(profiles || []).length > 0 ? (
-                profiles.map(u => (
-                  <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-sm text-navy-500 font-medium">{u.email}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{u.full_name || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">@{u.username}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(u.created_at)}</td>
-                  </tr>
-                ))
+                profiles.map(u => {
+                  const memberships = membershipsByUser[u.id] || []
+                  const tier = (u.license_tier as string) || 'free'
+
+                  return (
+                    <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 text-navy-500 font-medium">{u.email}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.full_name || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(u.created_at)}</td>
+                      <td className="px-4 py-3">
+                        <UserActionsCell
+                          userId={u.id}
+                          currentLicenseTier={tier}
+                          currentTables={memberships}
+                          allTables={tables || []}
+                          isSuper={myRoles?.some(r => r.role === 'super_admin') || false}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    {error ? 'Error loading users' : 'No users found'}
+                    No users found
                   </td>
                 </tr>
               )}
