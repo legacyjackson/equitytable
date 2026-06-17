@@ -1,11 +1,33 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Your existing config stays here...
-  
-  // Add these PWA configurations:
+  // ========================================
+  // IMAGE OPTIMIZATION
+  // ========================================
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.digitaloceanspaces.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudfront.net',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
+
+  // ========================================
+  // PWA HEADERS - Critical for offline support
+  // ========================================
   headers: async () => {
     return [
+      // Service worker should never be cached
       {
         source: '/service-worker.js',
         headers: [
@@ -19,6 +41,7 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Manifest file
       {
         source: '/manifest.json',
         headers: [
@@ -28,10 +51,40 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Cache static assets for long time
+      {
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Security headers
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
     ]
   },
 
-  // Rewrites for PWA files
+  // ========================================
+  // PWA REWRITES - Route PWA files correctly
+  // ========================================
   async rewrites() {
     return [
       {
@@ -42,26 +95,79 @@ const nextConfig: NextConfig = {
         source: '/service-worker.js',
         destination: '/service-worker.js',
       },
+      {
+        source: '/offline.html',
+        destination: '/offline.html',
+      },
     ]
   },
 
-  // Image optimization
-  images: {
-    remotePatterns: [
+  // ========================================
+  // REDIRECTS - Optional: Clean URLs
+  // ========================================
+  async redirects() {
+    return [
       {
-        protocol: 'https',
-        hostname: '**.supabase.co',
+        source: '/api/:path*',
+        destination: '/api/:path*',
+        permanent: true,
       },
-      {
-        protocol: 'https',
-        hostname: '**.digitaloceanspaces.com',
-      },
-    ],
+    ]
   },
 
-  // Experimental features (optional, for better PWA support)
+  // ========================================
+  // ENVIRONMENT VARIABLES
+  // ========================================
+  env: {
+    // These should also be in .env.local
+    // Just defaults, actual values come from env files
+  },
+
+  // ========================================
+  // WEBPACK CONFIG - Optional optimizations
+  // ========================================
+  webpack: (config, { isServer }) => {
+    // You can add custom webpack config here if needed
+    return config
+  },
+
+  // ========================================
+  // EXPERIMENTAL FEATURES
+  // ========================================
   experimental: {
+    // Optimize package imports for faster builds
     // optimizePackageImports: ['@supabase/supabase-js'],
+  },
+
+  // ========================================
+  // PRODUCTION OPTIMIZATIONS
+  // ========================================
+  swcMinify: true,
+  compress: true,
+
+  // ========================================
+  // REACT STRICT MODE
+  // ========================================
+  reactStrictMode: true,
+
+  // ========================================
+  // TYPESCRIPT
+  // ========================================
+  typescript: {
+    tsconfigPath: './tsconfig.json',
+  },
+
+  // ========================================
+  // TRAILING SLASH
+  // ========================================
+  trailingSlash: false,
+
+  // ========================================
+  // STRICT MODE for catching errors
+  // ========================================
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 5,
   },
 }
 
