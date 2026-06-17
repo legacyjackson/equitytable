@@ -1,15 +1,14 @@
+// app/api/invites/[code]/accept/route.ts
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // POST /api/invites/[code]/accept
+// User accepts invite and joins table
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    // Must await params in Next.js 15+
-    const { code } = await params
-
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,6 +16,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { code } = await params
     const svc = await createServiceClient()
 
     // Find the invite
