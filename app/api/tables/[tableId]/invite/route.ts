@@ -1,92 +1,168 @@
+// app/api/tables/[tableId]/invites/route.ts
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { inviteMemberSchema } from '@/lib/validations'
+import crypto from 'crypto'
 
-// POST /api/tables/[tableId]/invite
-export async function POST(request: Request, { params }: { params: Promise<{ tableId: string }> }) {
-  const { tableId } = await params
-
+// GET /api/tables/[tableId]/invites
+// List all active invites for a table
+export async function GET(
+  request: Request,
+  { params }: { params: { tableId: string } }
+) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Verify inviter is admin/owner
-    const { data: membership } = await supabase
-      .from('table_memberships')
-      .select('role')
-      .eq('table_id', tableId)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (!membership || !['owner', 'admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'You do not have permission to invite members.' }, { status: 403 })
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { tableId } = params
+
+    // Check user owns this table
+    const { data: table } = await supabase
+      .from('equity_tables')
+      .select('owner_id')
+      .eq('id', tableId)
+      .single()
+
+    if (!table || table.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+    }
+
+    const svc = await createServiceClient()
+    const { data: invites } = await svc
+      .from('table_invites')
+      .select('id, code, email, created_at, status, claimed_by')
+      .eq('table_id', tableId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({ invites })
+  } catch (error) {
+    console.error('Fetch invites error:', error)
+    return NextResponse.json({ error: 'Failed to fetch invites' }, { status: 500 })
+  }
+}
+
+// POST /api/tables/[tableId]/invites
+// Create a new invite link or email invite
+export async function POST(
+  request: Request,
+  { params }: { params: { tableId: string } }
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { tableId } = params
     const body = await request.json()
-    const parsed = inviteMemberSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    const { email, type = 'link' } = body // type: 'link' or 'email'
+
+    // Check user owns this table
+    const { data: table } = await supabase
+      .from('equity_tables')
+      .select('owner_id, name')
+      .eq('id', tableId)
+      .single()
+
+    if (!table || table.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    const { email, role } = parsed.data
+    // Generate unique invite code
+    const code = crypto.randomBytes(16).toString('hex')
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const inviteLink = `${appUrl}/invite/${code}`
 
-    // Check for existing invitation
-    const serviceClient = await createServiceClient()
-    const { data: existing } = await serviceClient
-      .from('table_invitations')
-      .select('id')
-      .eq('table_id', tableId)
-      .eq('invited_email', email.toLowerCase())
-      .eq('status', 'pending')
-      .maybeSingle()
+    const svc = await createServiceClient()
 
-    if (existing) {
-      return NextResponse.json({ error: 'An invitation for this email is already pending.' }, { status: 409 })
-    }
-
-    // Check if already a member
-    const { data: alreadyMember } = await serviceClient
-      .from('table_memberships')
-      .select('id')
-      .eq('table_id', tableId)
-      .eq('status', 'active')
-      .eq('profiles.email', email.toLowerCase())
-      .maybeSingle()
-
-    // Create invitation
-    const { data: invitation, error } = await serviceClient
-      .from('table_invitations')
+    // Create invite record
+    const { data: invite, error: inviteError } = await svc
+      .from('table_invites')
       .insert({
         table_id: tableId,
-        invited_email: email.toLowerCase(),
-        invited_by: user.id,
-        role,
-        status: 'pending',
-        expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        code,
+        email: email || null,
+        created_by: user.id,
+        status: 'active',
+        invite_link: inviteLink,
       })
       .select()
       .single()
 
-    if (error) throw error
+    if (inviteError || !invite) {
+      return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
+    }
 
-    // TODO Phase 2: Send invitation email via Resend
-    // For now, log the token for testing
-    console.log(`Invitation token for ${email}: ${invitation.token}`)
+    // If email type, send email notification (implement with Resend/SendGrid)
+    if (type === 'email' && email) {
+      // TODO: Send email to user with invite link
+      // await sendInviteEmail(email, table.name, inviteLink, user.full_name)
+    }
 
-    // Audit log
-    await serviceClient.from('audit_logs').insert({
-      actor_user_id: user.id,
-      action: 'table.member.invited',
-      target_type: 'table_invitation',
-      target_id: invitation.id,
-      metadata: { table_id: tableId, invited_email: email, role },
+    return NextResponse.json({
+      invite: {
+        id: invite.id,
+        code: invite.code,
+        link: inviteLink,
+        email: invite.email,
+        created_at: invite.created_at,
+      },
     })
-
-    return NextResponse.json({ success: true, invitation_id: invitation.id })
   } catch (error) {
-    console.error('Invite error:', error)
-    return NextResponse.json({ error: 'Failed to send invitation.' }, { status: 500 })
+    console.error('Create invite error:', error)
+    return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
+  }
+}
+
+// DELETE /api/tables/[tableId]/invites/[inviteId]
+// Revoke an invite
+export async function DELETE(
+  request: Request,
+  { params }: { params: { tableId: string } }
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { tableId } = params
+    const url = new URL(request.url)
+    const inviteId = url.pathname.split('/').pop()
+
+    // Check user owns this table
+    const { data: table } = await supabase
+      .from('equity_tables')
+      .select('owner_id')
+      .eq('id', tableId)
+      .single()
+
+    if (!table || table.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+    }
+
+    const svc = await createServiceClient()
+    const { error } = await svc
+      .from('table_invites')
+      .update({ status: 'revoked' })
+      .eq('id', inviteId)
+      .eq('table_id', tableId)
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to revoke invite' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Revoke invite error:', error)
+    return NextResponse.json({ error: 'Failed to revoke invite' }, { status: 500 })
   }
 }
