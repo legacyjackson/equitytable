@@ -1,182 +1,185 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { formatCurrency } from '@/lib/utils/format'
+import { createClient } from '@/lib/supabase/client'
 
-export const metadata = { title: 'Dashboard' }
+interface CourseCard {
+  id: string
+  title: string
+  category: string
+  description: string
+  estimated_minutes: number
+  thumbnail_url?: string
+  progress?: number
+}
 
-export default async function AppDashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+interface QuickStats {
+  coursesStarted: number
+  coursesCompleted: number
+  tablesJoined: number
+}
 
-  if (!user) redirect('/auth/sign-in')
+export default function AppHomePage() {
+  const supabase = createClient()
+  const [courses, setCourses] = useState<CourseCard[]>([])
+  const [stats, setStats] = useState<QuickStats>({ coursesStarted: 0, coursesCompleted: 0, tablesJoined: 0 })
+  const [loading, setLoading] = useState(true)
+  const [userName, setUserName] = useState('')
 
-  const [{ data: profile }, { data: memberships }, { data: recentProgress }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase
-      .from('table_memberships')
-      .select('*, equity_tables(id, name, slug, logo_url, member_count, status, pathway_participant_count)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .order('created_at'),
-    supabase
-      .from('lesson_progress')
-      .select('*, lessons(title, course_id, courses(title))')
-      .eq('user_id', user.id)
-      .eq('status', 'in_progress')
-      .order('updated_at', { ascending: false })
-      .limit(3),
-  ])
+  useEffect(() => {
+    loadData()
+  }, [])
 
-  const name = profile?.full_name?.split(' ')[0] || 'there'
+  const loadData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Get user name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.full_name) setUserName(profile.full_name)
+
+      // Get featured courses
+      const { data: allCourses } = await supabase
+        .from('courses')
+        .select('id, title, category_id, description, estimated_minutes, thumbnail_url, course_categories(name)')
+        .eq('status', 'published')
+        .limit(8)
+
+      setCourses(allCourses?.map(c => ({
+        id: c.id,
+        title: c.title,
+        category: c.course_categories?.name || 'General',
+        description: c.description,
+        estimated_minutes: c.estimated_minutes,
+        thumbnail_url: c.thumbnail_url,
+      })) || [])
+
+      // Get user stats
+      const { data: courseProgress } = await supabase
+        .from('course_progress')
+        .select('status')
+        .eq('user_id', user.id)
+
+      const { count: tablesCount } = await supabase
+        .from('table_memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      setStats({
+        coursesStarted: courseProgress?.length || 0,
+        coursesCompleted: courseProgress?.filter(p => p.status === 'completed').length || 0,
+        tablesJoined: tablesCount || 0,
+      })
+    } catch (error) {
+      console.error('Failed to load data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-navy-500 tracking-tight">
-          Good to see you, {name}.
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-navy-500 to-navy-600 text-white px-4 py-8 md:px-8">
+        <h1 className="text-2xl md:text-3xl font-display font-bold">
+          Welcome back{userName ? `, ${userName.split(' ')[0]}` : ''}! 👋
         </h1>
-        <p className="text-muted-foreground mt-1">
-          {memberships && memberships.length > 0
-            ? `You're part of ${memberships.length} Equity Table${memberships.length > 1 ? 's' : ''}.`
-            : 'Ready to start your first Equity Table?'}
-        </p>
+        <p className="text-white/80 text-sm mt-2">Keep building wealth through financial knowledge</p>
       </div>
 
-      {/* No tables — create CTA */}
-      {(!memberships || memberships.length === 0) && (
-        <div className="rounded-2xl bg-gradient-to-br from-navy-500 to-blue-700 p-8 text-center text-white">
-          <div className="text-4xl mb-3">🪑</div>
-          <h2 className="font-display text-xl font-semibold mb-2">
-            An empty table is just furniture.
-          </h2>
-          <p className="text-blue-100 text-sm mb-6 max-w-sm mx-auto">
-            Create your Equity Table and invite the people you trust to build wealth with you.
-          </p>
-          <Link
-            href="/create-table"
-            className="inline-flex items-center rounded-xl bg-gold-400 px-6 py-3 text-sm font-bold text-navy-500 hover:bg-gold-300 transition-colors"
-          >
-            Start an Equity Table — $49.99/month
+      {/* Quick Stats */}
+      <div className="px-4 md:px-8 py-6">
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <Link href="/app/courses" className="et-card p-4 md:p-6 text-center hover:shadow-lg transition-shadow">
+            <p className="text-2xl md:text-3xl font-display font-bold text-navy-500">{stats.coursesStarted}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">Courses Started</p>
+          </Link>
+          <Link href="/app/courses" className="et-card p-4 md:p-6 text-center hover:shadow-lg transition-shadow">
+            <p className="text-2xl md:text-3xl font-display font-bold text-green-600">{stats.coursesCompleted}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">Completed</p>
+          </Link>
+          <Link href="/app/tables" className="et-card p-4 md:p-6 text-center hover:shadow-lg transition-shadow">
+            <p className="text-2xl md:text-3xl font-display font-bold text-blue-600">{stats.tablesJoined}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">Tables</p>
           </Link>
         </div>
-      )}
+      </div>
 
-      {/* Tables grid */}
-      {memberships && memberships.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-display font-semibold text-navy-500">Your tables</h2>
-            <Link href="/app/my-tables" className="text-sm text-blue-600 hover:underline font-medium">
-              View all
-            </Link>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {memberships.map((m) => {
-              const t = m.equity_tables
-              if (!t) return null
-              return (
-                <Link
-                  key={m.table_id}
-                  href={`/app/tables/${m.table_id}`}
-                  className="et-card p-5 hover:shadow-et-card-hover transition-shadow group"
-                >
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-navy-100 flex items-center justify-center shrink-0 text-navy-500 font-bold">
-                      {t.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-navy-500 truncate group-hover:text-blue-700 transition-colors">
-                        {t.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{t.member_count} member{t.member_count !== 1 ? 's' : ''}</span>
-                    {t.pathway_participant_count > 0 && (
-                      <span className="text-green-600 font-medium">
-                        {t.pathway_participant_count} on Pathway
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
-
-            {/* Create table card */}
-            <Link
-              href="/create-table"
-              className="et-card p-5 border-dashed hover:shadow-et-card-hover transition-shadow flex flex-col items-center justify-center gap-2 text-center text-muted-foreground hover:text-navy-500 transition-colors min-h-[120px]"
-            >
-              <span className="text-2xl">+</span>
-              <span className="text-sm font-medium">Start another table</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Continue learning */}
-      {recentProgress && recentProgress.length > 0 && (
-        <div>
-          <h2 className="text-lg font-display font-semibold text-navy-500 mb-4">Continue learning</h2>
-          <div className="space-y-3">
-            {recentProgress.map((p) => {
-              const lesson = p.lessons as { title: string; course_id: string; courses: { title: string } | null } | null
-              if (!lesson) return null
-              const tableId = memberships?.[0]?.table_id
-              const href = tableId
-                ? `/app/tables/${tableId}/lessons/${p.lesson_id}`
-                : '/app'
-
-              return (
-                <Link
-                  key={p.id}
-                  href={href}
-                  className="et-card p-4 flex items-center gap-4 hover:shadow-et-card-hover transition-shadow"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                    📚
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-navy-500 truncate">{lesson.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{lesson.courses?.title}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-xs font-semibold text-blue-600">{Math.round(p.progress_percent)}%</div>
-                    <div className="w-16 h-1 bg-muted rounded-full mt-1 overflow-hidden">
-                      <div
-                        className="h-full bg-blue-600 rounded-full"
-                        style={{ width: `${p.progress_percent}%` }}
-                      />
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Global Pathways CTA — bottom of dashboard */}
-      <div className="rounded-xl border border-gold-400/30 bg-gold-50 p-5 flex items-start gap-4">
-        <span className="text-2xl shrink-0">🚀</span>
-        <div className="flex-1">
-          <p className="font-semibold text-navy-500 mb-0.5">
-            Keep learning here. When you're ready to act, start your Pathway.
-          </p>
-          <p className="text-sm text-muted-foreground mb-3">
-            Global Pathways turns financial education into a 6-month personalized action plan.
-          </p>
-          <a
-            href={process.env.DEFAULT_GLOBAL_PATHWAYS_URL || 'https://legacyplan.app/'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700"
+      {/* Quick Actions */}
+      <div className="px-4 md:px-8 py-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col md:flex-row gap-3">
+          <Link
+            href="/app/courses"
+            className="flex-1 rounded-xl bg-blue-600 text-white px-4 py-3 md:py-4 font-semibold hover:bg-blue-700 transition-colors text-center text-sm md:text-base"
           >
-            Learn about Global Pathways →
-          </a>
+            📚 Browse Courses
+          </Link>
+          <Link
+            href="/app/tables"
+            className="flex-1 rounded-xl bg-navy-500 text-white px-4 py-3 md:py-4 font-semibold hover:bg-navy-600 transition-colors text-center text-sm md:text-base"
+          >
+            🏛️ My Tables
+          </Link>
+        </div>
+      </div>
+
+      {/* Featured Courses */}
+      <div className="px-4 md:px-8 py-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg md:text-xl font-display font-bold text-navy-500">Popular Courses</h2>
+          <Link href="/app/courses" className="text-xs md:text-sm text-blue-600 hover:underline">
+            View all →
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-muted-foreground py-8">Loading courses...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {courses.map(course => (
+              <Link
+                key={course.id}
+                href={`/app/courses/${course.id}`}
+                className="et-card overflow-hidden hover:shadow-lg transition-shadow group"
+              >
+                {course.thumbnail_url && (
+                  <div className="w-full h-32 bg-gray-200 overflow-hidden">
+                    <img
+                      src={course.thumbnail_url}
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-blue-600 font-semibold">{course.category}</p>
+                  <h3 className="font-semibold text-navy-500 mt-1 line-clamp-2">{course.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-2">{course.estimated_minutes} min</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* CTA Section */}
+      <div className="px-4 md:px-8 py-8 md:py-12">
+        <div className="rounded-xl bg-gradient-to-br from-gold-400 to-gold-300 p-6 md:p-8 text-center">
+          <h3 className="text-xl md:text-2xl font-display font-bold text-navy-500">Create Your Equity Table</h3>
+          <p className="text-navy-500/80 text-sm mt-2">Lead your own wealth-building circle</p>
+          <Link
+            href="/create-table"
+            className="inline-block mt-4 px-6 py-2.5 md:py-3 bg-navy-500 text-white rounded-lg font-semibold hover:bg-navy-600 transition-colors text-sm md:text-base"
+          >
+            Get Started
+          </Link>
         </div>
       </div>
     </div>
