@@ -12,6 +12,13 @@ interface PageProps {
   searchParams: Promise<{ q?: string; type?: string }>
 }
 
+// Supabase to-one joins come back typed as arrays. This helper
+// normalizes either shape into a single object (or null).
+function firstOf<T>(rel: T | T[] | null | undefined): T | null {
+  if (Array.isArray(rel)) return rel[0] ?? null
+  return rel ?? null
+}
+
 export default async function EquityTablesDirectoryPage({ searchParams }: PageProps) {
   const { q, type } = await searchParams
   const supabase = await createClient()
@@ -36,10 +43,6 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
         .limit(60)
 
       if (q) query = query.ilike('name', `%${q}%`)
-      if (type) {
-        // filter by type slug via join — use raw filter
-        query = query.eq('equity_table_types.slug', type)
-      }
       return query
     })(),
   ])
@@ -47,14 +50,8 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
   // Client-side filter for type (Supabase join filtering is limited)
   let tables = tablesResult.data || []
   if (type) {
-  tables = tables.filter(t => {
-    // Supabase joins can return an array or a single object
-    const tt = Array.isArray(t.table_type)
-      ? t.table_type[0]
-      : t.table_type
-    return (tt as { slug?: string } | null)?.slug === type
-  })
-}
+    tables = tables.filter(t => firstOf(t.table_type)?.slug === type)
+  }
   if (q) {
     tables = tables.filter(t =>
       t.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -166,7 +163,7 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {tables.map(table => {
-              const tableType = table.table_type as { name: string; slug: string } | null
+              const tableType = firstOf(table.table_type) as { name: string; slug: string } | null
               return (
                 <Link
                   key={table.id}
