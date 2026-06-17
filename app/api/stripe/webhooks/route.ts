@@ -147,6 +147,19 @@ async function handleCheckoutCompleted(
     joined_at: new Date().toISOString(),
   })
 
+  // Add additional seat memberships if any
+  const additionalSeats = parseInt(metadata.additional_seats || '0', 10)
+  if (additionalSeats > 0) {
+    const seatMemberships = Array.from({ length: additionalSeats }, (_, i) => ({
+      table_id: table.id,
+      user_id: userId,
+      role: 'member' as const,
+      status: 'active' as const,
+      joined_at: new Date().toISOString(),
+    }))
+    await supabase.from('table_memberships').insert(seatMemberships)
+  }
+
   // Create subscription record
   await supabase.from('subscriptions').insert({
     table_id: table.id,
@@ -154,8 +167,8 @@ async function handleCheckoutCompleted(
     stripe_subscription_id: subscriptionId,
     base_price_id: subscription.items.data[0]?.price.id,
     status: subscription.status as 'active',
-    included_seats: 10,
-    extra_seats: 0,
+    included_seats: 1,
+    extra_seats: additionalSeats,
     current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     cancel_at_period_end: subscription.cancel_at_period_end,
