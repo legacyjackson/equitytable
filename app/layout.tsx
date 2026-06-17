@@ -1,9 +1,13 @@
-<link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#1e3a5f" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Equity Table" />
-<link rel="apple-touch-icon" href="/icon-192.png" />
+<head>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1e3a5f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Equity Table" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  
+  {/* Your other existing head content here */}
+</head>
 
 import type { Metadata, Viewport } from 'next'
 import { Inter, DM_Sans } from 'next/font/google'
