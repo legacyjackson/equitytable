@@ -66,11 +66,11 @@ export async function POST(request: Request) {
         .maybeSingle()
 
       if (badge) {
-        await serviceClient.from('user_badges').insert({
+        await serviceClient.from('user_badges').upsert({
           user_id: user.id,
           badge_id: badge.id,
           table_id: table_id || null,
-        }).onConflict('user_id, badge_id, table_id').ignore()
+        }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
       }
 
       // Award points

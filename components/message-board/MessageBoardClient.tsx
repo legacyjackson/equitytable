@@ -67,7 +67,8 @@ export function MessageBoardClient({
         .single()
 
       if (!error && data) {
-        setPosts(prev => [data as Post, ...prev])
+        const post: Post = { ...data, profiles: Array.isArray(data.profiles) ? (data.profiles[0] ?? null) : data.profiles }
+        setPosts(prev => [post, ...prev])
         setPostBody('')
         setPostTitle('')
         setPostType('discussion')

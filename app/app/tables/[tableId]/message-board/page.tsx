@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatRelativeTime } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
 import { MessageBoardClient } from '@/components/message-board/MessageBoardClient'
+import { firstOf } from '@/lib/utils/firstOf'
 
 interface MessageBoardPageProps {
   params: Promise<{ tableId: string }>
@@ -25,7 +26,7 @@ export default async function MessageBoardPage({ params }: MessageBoardPageProps
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/sign-in')
 
-  const [{ data: membership }, { data: table }, { data: posts }] = await Promise.all([
+  const [{ data: membership }, { data: table }] = await Promise.all([
     supabase
       .from('table_memberships')
       .select('role')
@@ -38,18 +39,19 @@ export default async function MessageBoardPage({ params }: MessageBoardPageProps
       .select('name, public_message_board, visibility')
       .eq('id', tableId)
       .maybeSingle(),
-    supabase
-      .from('posts')
-      .select(`
-        id, title, body, post_type, visibility, pinned, created_at, updated_at,
-        profiles:user_id (id, full_name, username, avatar_url)
-      `)
-      .eq('table_id', tableId)
-      .in('visibility', membership ? ['public', 'table_only', 'admin_only'] : ['public'])
-      .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(50),
   ])
+
+  const { data: posts } = await supabase
+    .from('posts')
+    .select(`
+      id, title, body, post_type, visibility, pinned, created_at, updated_at,
+      profiles:user_id (id, full_name, username, avatar_url)
+    `)
+    .eq('table_id', tableId)
+    .in('visibility', membership ? ['public', 'table_only', 'admin_only'] : ['public'])
+    .order('pinned', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(50)
 
   if (!table) notFound()
   const isMember = !!membership
@@ -66,7 +68,7 @@ export default async function MessageBoardPage({ params }: MessageBoardPageProps
 
       <MessageBoardClient
         tableId={tableId}
-        posts={posts ?? []}
+        posts={(posts ?? []).map(p => ({ ...p, profiles: firstOf(p.profiles) }))}
         currentUserId={user.id}
         isMember={isMember}
         isAdmin={isAdmin}

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatRelativeTime, formatCurrency } from '@/lib/utils/format'
 import { Leaderboard } from '@/components/gamification/Leaderboard'
+import { firstOf } from '@/lib/utils/firstOf'
 
 interface TableDashboardPageProps {
   params: Promise<{ tableId: string }>
@@ -373,7 +374,7 @@ export default async function TableDashboardPage({ params }: TableDashboardPageP
             ) : (
               <div className="space-y-3">
                 {recentPosts.map((post) => {
-                  const author = post.profiles as { full_name: string | null; avatar_url: string | null } | null
+                  const author = firstOf(post.profiles) as { full_name: string | null; avatar_url: string | null } | null
                   return (
                     <Link
                       key={post.id}

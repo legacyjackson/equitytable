@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'Payouts — Admin' }
 
@@ -25,7 +26,7 @@ export default async function AdminPayoutsPage() {
   // Group approved by table for easy bulk payout
   const byTable: Record<string, { tableId: string; tableName: string; total: number; count: number }> = {}
   for (const c of approved || []) {
-    const table = c.equity_tables as { name: string } | null
+    const table = firstOf(c.equity_tables) as { name: string } | null
     if (!c.table_id) continue
     if (!byTable[c.table_id]) {
       byTable[c.table_id] = { tableId: c.table_id, tableName: table?.name || 'Unknown', total: 0, count: 0 }

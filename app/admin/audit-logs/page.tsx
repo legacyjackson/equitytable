@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateTime } from '@/lib/utils/format'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'Audit Logs — Admin' }
 
@@ -78,7 +79,7 @@ export default async function AdminAuditLogsPage({
             </thead>
             <tbody className="divide-y divide-border">
               {logs?.map(log => {
-                const actor = log.profiles as { email: string; full_name: string | null } | null
+                const actor = firstOf(log.profiles) as { email: string; full_name: string | null } | null
                 const meta = log.metadata as Record<string, unknown> | null
 
                 return (

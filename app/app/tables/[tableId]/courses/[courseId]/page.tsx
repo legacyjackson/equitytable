@@ -37,7 +37,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
   const overallPct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0
 
   // Group lessons by module
-  const moduleMap = Object.fromEntries((modules || []).map(m => [m.id, { ...m, lessons: [] as typeof allLessons }]))
+  type ModuleWithLessons = NonNullable<typeof modules>[number] & { lessons: typeof allLessons }
+  const moduleMap: Record<string, ModuleWithLessons> = Object.fromEntries(
+    (modules || []).map(m => [m.id, { ...m, lessons: [] as typeof allLessons }])
+  )
   const unassigned: typeof allLessons = []
   for (const lesson of allLessons) {
     if (lesson.module_id && moduleMap[lesson.module_id]) {
@@ -111,7 +114,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                   <h3 className="font-semibold text-navy-500 text-sm">{mod.title}</h3>
                 </div>
                 <div className="divide-y divide-border">
-                  {mod.lessons.map((lesson, i) => {
+                  {mod.lessons.map((lesson: (typeof allLessons)[number], i: number) => {
                     const prog = progressMap[lesson.id]
                     const done = prog?.status === 'completed'
                     const inProg = prog?.status === 'in_progress'

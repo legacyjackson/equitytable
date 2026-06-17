@@ -119,11 +119,11 @@ export default async function InvitePage({ params }: InvitePageProps) {
   // Award badge
   const { data: badge } = await serviceClient.from('badges').select('id').eq('slug', 'seat-at-the-table').maybeSingle()
   if (badge) {
-    await serviceClient.from('user_badges').insert({
+    await serviceClient.from('user_badges').upsert({
       user_id: user.id,
       badge_id: badge.id,
       table_id: invitation.table_id,
-    }).onConflict('user_id,badge_id,table_id').ignore()
+    }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
   }
 
   redirect(`/app/tables/${invitation.table_id}?joined=true`)

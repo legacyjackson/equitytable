@@ -80,11 +80,11 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (badge) {
-      await serviceClient.from('user_badges').insert({
+      await serviceClient.from('user_badges').upsert({
         user_id: targetUserId,
         badge_id: badge.id,
         table_id,
-      }).onConflict('user_id, badge_id, table_id').ignore()
+      }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
     }
 
     // Only award points once per event (check if they already have points for this)

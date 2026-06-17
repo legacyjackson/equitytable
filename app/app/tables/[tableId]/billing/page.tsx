@@ -17,7 +17,7 @@ export default async function BillingPage({ params }: BillingPageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/sign-in')
 
-  const [{ data: membership }, { data: table }, { data: subscription }, { data: activeSeats }] =
+  const [{ data: membership }, { data: table }, { data: subscription }, { count: activeSeatCount }] =
     await Promise.all([
       supabase
         .from('table_memberships')
@@ -40,7 +40,7 @@ export default async function BillingPage({ params }: BillingPageProps) {
   const isOwner = membership?.role === 'owner'
   if (!isOwner) redirect(`/app/tables/${tableId}`)
 
-  const seatCount = activeSeats ?? 0
+  const seatCount = activeSeatCount ?? 0
   const usage = calculateSeatUsage(seatCount, subscription?.included_seats ?? 10)
   const estimatedMonthly = BASE_PRICE + (usage.extra_seats_needed * EXTRA_SEAT_PRICE)
 

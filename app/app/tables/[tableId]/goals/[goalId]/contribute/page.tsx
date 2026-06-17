@@ -50,7 +50,7 @@ export default function ContributePage({ params }: PageProps) {
           setGoal(data)
           setLoading(false)
           // Open modal immediately if goal accepts contributions
-          if (data?.accept_contributions) setShowModal(true)
+          if (data?.contribution_type && data.contribution_type !== 'manual') setShowModal(true)
         })
     })
   }, [params])

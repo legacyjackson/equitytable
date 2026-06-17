@@ -28,7 +28,7 @@ export default async function EventPage({ params }: EventPageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/sign-in')
 
-  const [{ data: event }, { data: membership }, { data: rsvp }, { data: rsvpCount }, { data: recordings }] =
+  const [{ data: event }, { data: membership }, { data: rsvp }, { count: rawGoingCount }, { data: recordings }] =
     await Promise.all([
       supabase
         .from('equity_events')
@@ -72,7 +72,7 @@ export default async function EventPage({ params }: EventPageProps) {
   const isAdmin = ['owner', 'admin', 'facilitator'].includes(membership?.role ?? '')
   const isPast = new Date(event.ends_at) < new Date()
   const isUpcoming = new Date(event.starts_at) > new Date()
-  const goingCount = rsvpCount ?? 0
+  const goingCountNum = rawGoingCount ?? 0
 
   const host = (event as any).created_by_profile
   const attachedCourse = (event as any).attached_course
@@ -123,8 +123,8 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
                 <span>Hosted by <strong className="text-foreground">{host?.full_name ?? 'Table admin'}</strong></span>
               </div>
-              {goingCount > 0 && (
-                <span>· <strong className="text-foreground">{goingCount}</strong> going</span>
+              {goingCountNum > 0 && (
+                <span>· <strong className="text-foreground">{goingCountNum}</strong> going</span>
               )}
             </div>
 
@@ -246,7 +246,7 @@ export default async function EventPage({ params }: EventPageProps) {
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Capacity</p>
                 <p className="text-sm text-foreground">
-                  {goingCount} / {event.capacity} spots filled
+                  {goingCountNum} / {event.capacity} spots filled
                 </p>
               </div>
             )}

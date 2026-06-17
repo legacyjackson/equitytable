@@ -119,7 +119,7 @@ export default function AdminAnalyticsPage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" fontSize={12} />
               <YAxis fontSize={12} />
-              <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+              <Tooltip formatter={(value) => `$${(value as number).toFixed(2)}`} />
               <Line type="monotone" dataKey="revenue" stroke="#7ed321" strokeWidth={2} dot={{ fill: '#7ed321' }} />
             </LineChart>
           </ResponsiveContainer>
@@ -173,7 +173,7 @@ export default function AdminAnalyticsPage() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="week" />
             <YAxis domain={[0, 100]} label={{ value: 'Retention %', angle: -90, position: 'insideLeft' }} />
-            <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+            <Tooltip formatter={(value) => `${(value as number).toFixed(1)}%`} />
             <Line type="monotone" dataKey="retention" stroke="#f5a623" strokeWidth={2} dot={{ fill: '#f5a623' }} />
           </LineChart>
         </ResponsiveContainer>

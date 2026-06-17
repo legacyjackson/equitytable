@@ -44,7 +44,6 @@ export async function POST(request: Request) {
         .select('stripe_subscription_id, stripe_customer_id, status')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single()
         .maybeSingle()
 
       if (activeSub?.stripe_customer_id && activeSub.status === 'active') {
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
             customer: activeSub.stripe_customer_id,
             line_items: [
               {
-                price: PLANS.extraSeats.priceId,
+                price: PLANS.extraSeat.priceId,
                 quantity: additionalSeats,
               },
             ],
@@ -106,7 +105,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
         ...(additionalSeats > 0 ? [{
-          price: PLANS.extraSeats.priceId,
+          price: PLANS.extraSeat.priceId,
           quantity: additionalSeats,
         }] : []),
       ],

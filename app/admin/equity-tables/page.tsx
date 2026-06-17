@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatCurrency } from '@/lib/utils/format'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'Equity Tables — Admin' }
 
@@ -97,8 +98,8 @@ export default async function AdminEquityTablesPage({
             <tbody className="divide-y divide-border">
               {tables?.map(t => {
                 const sub = Array.isArray(t.subscriptions) ? t.subscriptions[0] : t.subscriptions as { status: string; included_seats: number; extra_seats: number; stripe_subscription_id: string | null } | null
-                const owner = t.owner as { email: string; full_name: string | null } | null
-                const tableType = t.table_type as { name: string } | null
+                const owner = firstOf(t.owner) as { email: string; full_name: string | null } | null
+                const tableType = firstOf(t.table_type) as { name: string } | null
 
                 return (
                   <tr key={t.id} className="hover:bg-muted/30 transition-colors">

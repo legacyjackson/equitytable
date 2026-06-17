@@ -9,16 +9,14 @@ export async function POST(
   { params }: { params: Promise<{ code: string }> }  // ✅ CORRECT
 )
 {
-  const { code } = await params  // ← Must await it! {
   try {
+    const { code } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { code } = params
     const svc = await createServiceClient()
 
     // Find the invite

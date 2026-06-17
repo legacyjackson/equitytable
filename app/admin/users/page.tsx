@@ -87,7 +87,7 @@ export default async function AdminUsersPage({
             </thead>
             <tbody className="divide-y divide-border">
               {(profiles || []).length > 0 ? (
-                profiles.map(u => {
+                profiles!.map(u => {
                   const memberships = membershipsByUser[u.id] || []
                   const tier = (u.license_tier as string) || 'free'
 

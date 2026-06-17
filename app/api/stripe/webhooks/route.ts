@@ -190,11 +190,11 @@ async function handleCheckoutCompleted(
     .maybeSingle()
 
   if (badge) {
-    await supabase.from('user_badges').insert({
+    await supabase.from('user_badges').upsert({
       user_id: userId,
       badge_id: badge.id,
       table_id: table.id,
-    }).onConflict('user_id, badge_id, table_id').ignore()
+    }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
   }
 
   // Award points
@@ -376,11 +376,11 @@ async function handlePaymentIntentSucceeded(
     .maybeSingle()
 
   if (badge) {
-    await supabase.from('user_badges').insert({
+    await supabase.from('user_badges').upsert({
       user_id,
       badge_id: badge.id,
       table_id: table_id || null,
-    }).onConflict('user_id, badge_id, table_id').ignore()
+    }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
   }
 
   await supabase.from('points_ledger').insert({

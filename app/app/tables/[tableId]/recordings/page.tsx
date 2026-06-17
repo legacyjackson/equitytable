@@ -18,7 +18,7 @@ export default async function RecordingsPage({ params }: RecordingsPageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/sign-in')
 
-  const [{ data: membership }, { data: table }, { data: recordings }] = await Promise.all([
+  const [{ data: membership }, { data: table }] = await Promise.all([
     supabase
       .from('table_memberships')
       .select('role')
@@ -27,20 +27,21 @@ export default async function RecordingsPage({ params }: RecordingsPageProps) {
       .eq('status', 'active')
       .maybeSingle(),
     supabase.from('equity_tables').select('name, leaderboard_enabled').eq('id', tableId).maybeSingle(),
-    supabase
-      .from('event_recordings')
-      .select(`
-        id, title, description, video_url, audio_url, thumbnail_url,
-        duration_seconds, visibility, status, created_at, tags,
-        storage_provider, mux_asset_id,
-        equity_events(id, title, starts_at),
-        profiles:uploaded_by(full_name)
-      `)
-      .eq('table_id', tableId)
-      .in('visibility', membership ? ['public', 'table_only'] : ['public'])
-      .eq('status', 'ready')
-      .order('created_at', { ascending: false }),
   ])
+
+  const { data: recordings } = await supabase
+    .from('event_recordings')
+    .select(`
+      id, title, description, video_url, audio_url, thumbnail_url,
+      duration_seconds, visibility, status, created_at, tags,
+      storage_provider, mux_asset_id,
+      equity_events(id, title, starts_at),
+      profiles:uploaded_by(full_name)
+    `)
+    .eq('table_id', tableId)
+    .in('visibility', membership ? ['public', 'table_only'] : ['public'])
+    .eq('status', 'ready')
+    .order('created_at', { ascending: false })
 
   if (!table) notFound()
 

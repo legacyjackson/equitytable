@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatMinutes } from '@/lib/utils/format'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'Courses — Admin' }
 
@@ -95,7 +96,7 @@ export default async function AdminCoursesPage({
             </thead>
             <tbody className="divide-y divide-border">
               {courses?.map(course => {
-                const cat = course.category as { name: string; slug: string } | null
+                const cat = firstOf(course.category) as { name: string; slug: string } | null
                 const moduleCount = Array.isArray((course as { course_modules?: unknown[] }).course_modules) ? (course as { course_modules: unknown[] }).course_modules.length : 0
 
                 return (

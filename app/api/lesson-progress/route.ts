@@ -42,11 +42,11 @@ export async function POST(request: Request) {
         .from('badges').select('id').eq('slug', 'first-lesson').maybeSingle()
 
       if (badge) {
-        await supabase.from('user_badges').insert({
+        await supabase.from('user_badges').upsert({
           user_id: user.id,
           badge_id: badge.id,
           table_id: table_id || null,
-        }).onConflict('user_id,badge_id,table_id').ignore()
+        }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
       }
     }
 

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { BadgeGrid } from '@/components/gamification/BadgeGrid'
+import { firstOf } from '@/lib/utils/firstOf'
 import { formatDate } from '@/lib/utils/format'
 
 interface PageProps {
@@ -53,7 +54,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const totalXP = (pointsTotal || []).reduce((s, r) => s + r.points, 0)
 
   const earned = (earnedRows || []).map(r => ({
-    ...(r.badges as { id: string; name: string; slug: string; description: string | null; icon: string | null; points: number }),
+    ...(firstOf(r.badges) as { id: string; name: string; slug: string; description: string | null; icon: string | null; points: number }),
     earned_at: r.earned_at,
   }))
 

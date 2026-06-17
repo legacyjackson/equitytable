@@ -67,11 +67,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     .maybeSingle()
 
   if (badge) {
-    await supabase.from('user_badges').insert({
+    await supabase.from('user_badges').upsert({
       user_id: user.id,
       badge_id: badge.id,
       table_id: tableId,
-    }).onConflict('user_id, badge_id, table_id').ignore()
+    }, { onConflict: 'user_id,badge_id,table_id', ignoreDuplicates: true })
   }
 
   await supabase.from('points_ledger').insert({

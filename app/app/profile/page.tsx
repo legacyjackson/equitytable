@@ -17,7 +17,7 @@ export default function ProfilePage() {
     const fetchData = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) window.location.href = '/auth/sign-in'
+      if (!user) { window.location.href = '/auth/sign-in'; return }
 
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       const { data: badges } = await supabase

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { BadgeGrid } from '@/components/gamification/BadgeGrid'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'My Badges' }
 
@@ -22,9 +23,9 @@ export default async function BadgesPage() {
   const totalXP = (pointsTotal || []).reduce((sum, r) => sum + r.points, 0)
 
   const earned = (earnedRows || []).map(r => ({
-    ...(r.badges as { id: string; name: string; slug: string; description: string | null; icon: string | null; points: number }),
+    ...(firstOf(r.badges) as { id: string; name: string; slug: string; description: string | null; icon: string | null; points: number }),
     earned_at: r.earned_at,
-    table_name: (r.equity_tables as { name: string } | null)?.name ?? null,
+    table_name: (firstOf(r.equity_tables) as { name: string } | null)?.name ?? null,
   }))
 
   const available = (allBadges || []).map(b => ({

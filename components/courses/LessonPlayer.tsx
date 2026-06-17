@@ -39,7 +39,7 @@ export function LessonPlayer({
   const [completed, setCompleted] = useState(initialProgress?.status === 'completed')
   const [showCompletion, setShowCompletion] = useState(false)
   const [saving, setSaving] = useState(false)
-  const progressSaveRef = useRef<ReturnType<typeof setTimeout>>()
+  const progressSaveRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Quiz state
   const [showQuiz, setShowQuiz] = useState(false)

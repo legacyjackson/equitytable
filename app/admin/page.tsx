@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/format'
+import { firstOf } from '@/lib/utils/firstOf'
 
 export const metadata = { title: 'Super Admin' }
 
@@ -134,7 +135,7 @@ export default async function AdminDashboardPage() {
           ) : (
             <div className="divide-y divide-border">
               {recentConversions.map(c => {
-                const table = c.equity_tables as { name: string } | null
+                const table = firstOf(c.equity_tables) as { name: string } | null
                 return (
                   <div key={(c as any).id} className="flex items-center gap-3 px-5 py-3">
                     <div className="flex-1 min-w-0">

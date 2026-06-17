@@ -59,13 +59,14 @@ export default async function CoursesPage({ params }: CoursesPageProps) {
   ])
 
   // Index progress by course ID
-  const progressMap: Record<string, typeof progress extends Array<infer T> ? T : never> = {}
+  type ProgressRow = NonNullable<typeof progress>[number]
+  const progressMap: Record<string, ProgressRow> = {}
   progress?.forEach(p => { progressMap[p.course_id] = p })
 
   // Group courses by category
   const byCategory: Record<string, { name: string; courses: typeof courses }> = {}
   courses?.forEach(course => {
-    const cat = (course.course_categories as { name: string; slug: string } | null)
+    const cat = (Array.isArray(course.course_categories) ? course.course_categories[0] ?? null : course.course_categories) as { name: string; slug: string } | null
     const key = cat?.slug || 'other'
     const label = cat?.name || 'Other'
     if (!byCategory[key]) byCategory[key] = { name: label, courses: [] }
@@ -77,12 +78,15 @@ export default async function CoursesPage({ params }: CoursesPageProps) {
     return p && p.progress_percent > 0 && !p.completed_at
   }) ?? []
 
+  const completedCourses = courses?.filter(c => !!progressMap[c.id]?.completed_at) ?? []
+  const allCourses = courses ?? []
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <PageHeader
         title="Course library"
-        description={`${filteredCourses.length} course${filteredCourses.length !== 1 ? 's' : ''} · ${completed} completed · ${inProgress.length} in progress`}
+        description={`${allCourses.length} course${allCourses.length !== 1 ? 's' : ''} · ${completedCourses.length} completed · ${inProgress.length} in progress`}
       />
 
       {/* Continue learning */}
