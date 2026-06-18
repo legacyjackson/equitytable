@@ -103,19 +103,6 @@ const nextConfig: NextConfig = {
   },
 
   // ========================================
-  // REDIRECTS - Optional: Clean URLs
-  // ========================================
-  async redirects() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: '/api/:path*',
-        permanent: true,
-      },
-    ]
-  },
-
-  // ========================================
   // ENVIRONMENT VARIABLES
   // ========================================
   env: {

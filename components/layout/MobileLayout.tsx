@@ -32,13 +32,16 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
       icon: '📚',
       label: 'Learn',
       href: '/app/courses',
-      active: pathname.startsWith('/app/courses'),
+      active: pathname.startsWith('/app/courses') || /^\/app\/tables\/[^/]+\/courses/.test(pathname),
     },
     {
       icon: '🏛️',
       label: 'Tables',
       href: '/app/tables',
-      active: pathname.startsWith('/app/tables') && !pathname.includes('/analytics'),
+      active:
+        pathname.startsWith('/app/tables') &&
+        !pathname.includes('/analytics') &&
+        !/^\/app\/tables\/[^/]+\/courses/.test(pathname),
     },
     {
       icon: '📊',
