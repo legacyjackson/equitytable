@@ -35,6 +35,7 @@ export default function CreateTablePage() {
   const supabase = createClient()
   const [step, setStep] = useState(0)
   const [selectedType, setSelectedType] = useState<typeof TABLE_TYPES[0] | null>(null)
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [additionalSeats, setAdditionalSeats] = useState(0)
@@ -92,32 +93,42 @@ export default function CreateTablePage() {
     })
   }
 
-  const handleTypeSelect = (type: typeof TABLE_TYPES[0]) => {
+  const handleTypeSelect = async (type: typeof TABLE_TYPES[0]) => {
     if (!userStats?.canCreate) {
       setError('You are already a member of 3 tables. Please leave a table before creating a new one.')
       return
     }
+    setError(null)
+
+    const { data: typeRow, error: typeError } = await supabase
+      .from('equity_table_types')
+      .select('id')
+      .eq('slug', type.id)
+      .single()
+
+    if (typeError || !typeRow) {
+      setError('Could not load that table type. Please try again.')
+      return
+    }
+
     setSelectedType(type)
+    setSelectedTypeId(typeRow.id)
     setStep(1)
   }
 
   const onSubmit = async (data: CreateTableInput) => {
-    if (!selectedType || !userStats) return
+    if (!selectedType || !selectedTypeId || !userStats) return
     setLoading(true)
     setError(null)
 
     try {
-      // Fetch table type UUID
-      const response = await fetch('/api/table-types/' + selectedType.id)
-      const typeData = await response.json()
-
       const checkoutRes = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tableSetup: {
             ...data,
-            table_type_id: typeData.id,
+            table_type_id: selectedTypeId,
           },
           additionalSeats: additionalSeats,
           tablesOwned: userStats.tablesOwned,
@@ -343,7 +354,7 @@ export default function CreateTablePage() {
                 </div>
               </div>
 
-              <input type="hidden" {...register('table_type_id')} value={selectedType.id} />
+              <input type="hidden" {...register('table_type_id')} value={selectedTypeId ?? ''} />
 
               <button
                 type="submit"
