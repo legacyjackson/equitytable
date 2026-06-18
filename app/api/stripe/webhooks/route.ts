@@ -4,6 +4,7 @@ import { stripe, constructWebhookEvent } from '@/lib/stripe/client'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateAffiliateCode, buildAffiliateUrl } from '@/lib/utils/affiliate'
 import { slugify } from '@/lib/utils/slugify'
+import { bootstrapTableContent } from '@/lib/utils/bootstrapTableContent'
 import type Stripe from 'stripe'
 
 // POST /api/stripe/webhooks
@@ -180,6 +181,14 @@ async function handleCheckoutCompleted(
     code: affiliateCode,
     destination_url: affiliateUrl,
     active: true,
+  })
+
+  await bootstrapTableContent(supabase, {
+    tableId: table.id,
+    tableTypeId: tableTypeId,
+    ownerId: userId,
+    tableName: tableName,
+    mission: metadata.table_mission || '',
   })
 
   // Award "Seat at the Table" badge

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateAffiliateCode, buildAffiliateUrl } from '@/lib/utils/affiliate'
 import { slugify } from '@/lib/utils/slugify'
+import { bootstrapTableContent } from '@/lib/utils/bootstrapTableContent'
 
 // POST /api/tables/create-direct
 // Creates a table immediately for users with active $49.99 subscription (no payment needed)
@@ -102,6 +103,14 @@ export async function POST(request: Request) {
       code: affiliateCode,
       destination_url: affiliateUrl,
       active: true,
+    })
+
+    await bootstrapTableContent(svc, {
+      tableId: table.id,
+      tableTypeId: tableSetup.table_type_id,
+      ownerId: user.id,
+      tableName: tableSetup.name,
+      mission: tableSetup.mission || '',
     })
 
     return NextResponse.json({
