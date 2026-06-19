@@ -74,8 +74,8 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Logo variant="light-bg" size="sm" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="text-sm font-semibold text-navy-500 px-3 py-2 hover:bg-muted rounded-lg transition-colors">Sign in</Link>
-            <Link href="/auth/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start a table</Link>
+            <Link href="/sign-in" className="text-sm font-semibold text-navy-500 px-3 py-2 hover:bg-muted rounded-lg transition-colors">Sign in</Link>
+            <Link href="/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start a table</Link>
           </div>
         </div>
       </nav>
@@ -155,7 +155,7 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
                   Clear filters
                 </Link>
               )}
-              <Link href="/auth/sign-up" className="rounded-xl bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">
+              <Link href="/sign-up" className="rounded-xl bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">
                 Start an Equity Table
               </Link>
             </div>
@@ -225,7 +225,7 @@ export default async function EquityTablesDirectoryPage({ searchParams }: PagePr
           <p className="text-blue-100 text-sm mb-6">
             $49.99/month · 10 seats · Any community type
           </p>
-          <Link href="/auth/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-6 py-3 text-sm font-bold text-navy-500 hover:bg-gold-300 transition-colors">
+          <Link href="/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-6 py-3 text-sm font-bold text-navy-500 hover:bg-gold-300 transition-colors">
             Start an Equity Table
           </Link>
         </div>

@@ -24,7 +24,7 @@ const STATUS_DOT: Record<string, string> = {
 export default async function MyTablesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: memberships } = await supabase
     .from('table_memberships')

@@ -19,7 +19,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
   const { tableId, courseId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: membership }, { data: course }, { data: modules }, { data: lessons }, { data: progRows }] = await Promise.all([
     supabase.from('table_memberships').select('role').eq('table_id', tableId).eq('user_id', user.id).maybeSingle(),

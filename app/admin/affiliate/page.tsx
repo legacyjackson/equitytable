@@ -8,7 +8,7 @@ export const metadata = { title: 'Affiliate — Admin' }
 export default async function AdminAffiliatePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [
     { count: totalClicks },

@@ -8,7 +8,7 @@ export const metadata = { title: 'My Badges' }
 export default async function BadgesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: earnedRows }, { data: allBadges }, { data: pointsTotal }] = await Promise.all([
     supabase

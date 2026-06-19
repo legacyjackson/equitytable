@@ -7,9 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 
 interface Invite {
   id: string
-  code: string
   link: string
-  email: string | null
+  email: string
   status: string
   created_at: string
 }
@@ -38,14 +37,12 @@ export default function TableSettingsPage() {
   }
 
   const createInvite = async () => {
+    if (!newInviteEmail) return
     setCreating(true)
     const res = await fetch(`/api/tables/${tableId}/invites`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: newInviteEmail || null,
-        type: newInviteEmail ? 'email' : 'link',
-      }),
+      body: JSON.stringify({ email: newInviteEmail, role: 'member' }),
     })
 
     const data = await res.json()
@@ -92,19 +89,20 @@ export default function TableSettingsPage() {
             type="email"
             value={newInviteEmail}
             onChange={(e) => setNewInviteEmail(e.target.value)}
-            placeholder="Email (optional)"
+            placeholder="member@example.com"
+            required
             className="flex-1 rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-blue-600"
           />
           <button
             onClick={createInvite}
-            disabled={creating}
+            disabled={creating || !newInviteEmail}
             className="rounded-lg bg-navy-500 text-white px-4 py-2.5 font-semibold hover:bg-navy-600 disabled:opacity-60"
           >
             {creating ? 'Creating...' : 'Create invite'}
           </button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Leave email blank to create a shareable link. Include email to send direct invitation.
+          Sends an email invitation and gives you a shareable link.
         </p>
       </div>
 
@@ -117,27 +115,19 @@ export default function TableSettingsPage() {
             {invites.map(invite => (
               <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50">
                 <div className="flex-1">
-                  {invite.email ? (
-                    <p className="text-sm font-medium text-navy-500">{invite.email}</p>
-                  ) : (
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
-                      {invite.code}
-                    </code>
-                  )}
+                  <p className="text-sm font-medium text-navy-500">{invite.email}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Created {new Date(invite.created_at).toLocaleDateString()}
                   </p>
                 </div>
 
                 <div className="flex gap-2">
-                  {!invite.email && (
-                    <button
-                      onClick={() => copyLink(invite.link)}
-                      className="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
-                    >
-                      {copied === invite.link ? '✓ Copied' : 'Copy link'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => copyLink(invite.link)}
+                    className="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
+                  >
+                    {copied === invite.link ? '✓ Copied' : 'Copy link'}
+                  </button>
                   <button
                     onClick={() => revokeInvite(invite.id)}
                     className="text-xs px-3 py-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100"

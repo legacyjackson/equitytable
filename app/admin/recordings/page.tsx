@@ -13,7 +13,7 @@ export default async function AdminRecordingsPage({
   const { visibility, status } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   let query = supabase
     .from('event_recordings')

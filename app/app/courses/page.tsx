@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export default async function CoursesIndexPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: membership } = await supabase
     .from('table_memberships')

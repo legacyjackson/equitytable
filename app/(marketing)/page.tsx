@@ -118,7 +118,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href="/auth/sign-up"
+                href="/sign-up"
                 className="inline-flex items-center justify-center rounded-xl bg-gold-400 px-7 py-4 text-base font-bold text-navy-500 hover:bg-gold-300 transition-colors shadow-lg hover:shadow-xl"
               >
                 Start an Equity Table
@@ -239,7 +239,7 @@ export default function LandingPage() {
             $179.99 affiliate reward per referred member · First month's fee
           </p>
           <Link
-            href="/auth/sign-up"
+            href="/sign-up"
             className="inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-base font-bold text-navy-500 hover:bg-blue-50 transition-colors shadow-lg"
           >
             Start your Equity Table
@@ -289,7 +289,7 @@ export default function LandingPage() {
             </p>
 
             <Link
-              href="/auth/sign-up"
+              href="/sign-up"
               className="block text-center rounded-xl bg-navy-500 py-3.5 text-base font-semibold text-white hover:bg-navy-600 transition-colors shadow-sm"
             >
               Start an Equity Table

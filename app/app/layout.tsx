@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/auth/sign-in')
+    redirect('/sign-in')
   }
 
   // Load profile + memberships for sidebar/nav context

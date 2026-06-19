@@ -21,7 +21,7 @@ export default async function TableDashboardPage({ params }: TableDashboardPageP
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   // Load everything needed for the dashboard in parallel
   const [

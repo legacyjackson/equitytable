@@ -142,8 +142,8 @@ export default function TableTypesPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Logo variant="light-bg" size="sm" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="text-sm font-semibold text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors">Sign in</Link>
-            <Link href="/auth/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start an Equity Table</Link>
+            <Link href="/sign-in" className="text-sm font-semibold text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors">Sign in</Link>
+            <Link href="/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start an Equity Table</Link>
           </div>
         </div>
       </nav>
@@ -212,7 +212,7 @@ export default function TableTypesPage() {
           <p className="text-blue-100 text-sm mb-7 max-w-md mx-auto">
             $49.99/month, 10 seats included. You choose the type when you create your table.
           </p>
-          <Link href="/auth/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-7 py-3.5 text-sm font-bold text-navy-500 hover:bg-gold-300 transition-colors">
+          <Link href="/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-7 py-3.5 text-sm font-bold text-navy-500 hover:bg-gold-300 transition-colors">
             Start an Equity Table
           </Link>
         </div>

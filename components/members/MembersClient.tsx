@@ -78,7 +78,7 @@ export function MembersClient({
     setInviting(true)
     setInviteError(null)
 
-    const res = await fetch(`/api/tables/${tableId}/invite`, {
+    const res = await fetch(`/api/tables/${tableId}/invites`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -109,7 +109,7 @@ export function MembersClient({
   }
 
   const revokeInvitation = async (invitationId: string) => {
-    await fetch(`/api/tables/${tableId}/invitations/${invitationId}`, { method: 'DELETE' })
+    await fetch(`/api/tables/${tableId}/invites/${invitationId}`, { method: 'DELETE' })
     window.location.reload()
   }
 

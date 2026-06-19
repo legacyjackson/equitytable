@@ -15,7 +15,7 @@ export default async function BillingPage({ params }: BillingPageProps) {
   const { tableId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: membership }, { data: table }, { data: subscription }, { count: activeSeatCount }] =
     await Promise.all([

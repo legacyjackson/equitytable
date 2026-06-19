@@ -35,7 +35,7 @@ export default function SignUpPage() {
       password: data.password,
       options: {
         data: { full_name: data.full_name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
     })
 
@@ -193,7 +193,7 @@ export default function SignUpPage() {
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/auth/sign-in" className="font-semibold text-blue-600 hover:text-blue-700">
+            <Link href="/sign-in" className="font-semibold text-blue-600 hover:text-blue-700">
               Sign in
             </Link>
           </p>

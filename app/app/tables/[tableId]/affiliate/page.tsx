@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/format'
+import { CopyButton } from '@/components/affiliate/CopyButton'
 
 interface AffiliatePageProps {
   params: Promise<{ tableId: string }>
@@ -12,7 +13,7 @@ export default async function AffiliatePage({ params }: AffiliatePageProps) {
   const { tableId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: membership } = await supabase
     .from('table_memberships')
@@ -154,17 +155,5 @@ export default async function AffiliatePage({ params }: AffiliatePageProps) {
         Payout amounts are managed by Equity Table administrators.
       </p>
     </div>
-  )
-}
-
-// Simple copy button (client component inline)
-function CopyButton({ text }: { text: string }) {
-  return (
-    <button
-      onClick={() => navigator.clipboard.writeText(text)}
-      className="shrink-0 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:bg-muted transition-colors"
-    >
-      Copy
-    </button>
   )
 }

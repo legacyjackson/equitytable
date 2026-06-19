@@ -20,7 +20,7 @@ export default async function GoalPage({ params }: GoalPageProps) {
   const { tableId, goalId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: goal }, { data: membership }, { data: updates }] = await Promise.all([
     supabase

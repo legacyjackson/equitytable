@@ -124,7 +124,7 @@ export default async function PublicTablePage({ params }: PublicTablePageProps) 
               ← All tables
             </Link>
             <Link
-              href="/auth/sign-up"
+              href="/sign-up"
               className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
             >
               Sign up
@@ -292,14 +292,14 @@ export default async function PublicTablePage({ params }: PublicTablePageProps) 
                 Create your account to access courses, events, and connect with this community.
               </p>
               <Link
-                href="/auth/sign-up"
+                href="/sign-up"
                 className="block w-full rounded-xl bg-navy-500 py-3 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
               >
                 Create an account
               </Link>
               <p className="text-xs text-muted-foreground mt-3">
                 Already a member?{' '}
-                <Link href="/auth/sign-in" className="text-blue-600 hover:underline">Sign in</Link>
+                <Link href="/sign-in" className="text-blue-600 hover:underline">Sign in</Link>
               </p>
             </div>
 

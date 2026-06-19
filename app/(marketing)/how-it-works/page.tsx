@@ -90,8 +90,8 @@ export default function HowItWorksPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Logo variant="light-bg" size="sm" /></Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/sign-in" className="text-sm font-semibold text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors">Sign in</Link>
-            <Link href="/auth/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start an Equity Table</Link>
+            <Link href="/sign-in" className="text-sm font-semibold text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors">Sign in</Link>
+            <Link href="/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">Start an Equity Table</Link>
           </div>
         </div>
       </nav>
@@ -150,7 +150,7 @@ export default function HowItWorksPage() {
           <div className="et-gold-bar mx-auto mb-5" />
           <h2 className="font-display text-3xl font-bold text-white mb-3">Ready to start?</h2>
           <p className="text-blue-100 mb-8">$49.99/month includes 10 seats and everything you need to launch.</p>
-          <Link href="/auth/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-8 py-4 text-base font-bold text-navy-500 hover:bg-gold-300 transition-colors shadow-lg">
+          <Link href="/sign-up" className="inline-flex items-center rounded-xl bg-gold-400 px-8 py-4 text-base font-bold text-navy-500 hover:bg-gold-300 transition-colors shadow-lg">
             Start an Equity Table
           </Link>
         </div>

@@ -19,26 +19,26 @@ export async function POST(
     const { code } = await params
     const svc = await createServiceClient()
 
-    // Find the invite
-    const { data: invite, error: inviteError } = await svc
-      .from('table_invites')
-      .select('id, table_id, status, email')
-      .eq('code', code)
+    // Find the invitation
+    const { data: invitation, error: inviteError } = await svc
+      .from('table_invitations')
+      .select('id, table_id, status, invited_email, invited_by, role, expires_at')
+      .eq('token', code)
       .single()
 
-    if (inviteError || !invite) {
+    if (inviteError || !invitation) {
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
-    if (invite.status !== 'active') {
+    if (invitation.status !== 'pending' || new Date(invitation.expires_at) < new Date()) {
       return NextResponse.json(
         { error: 'This invite is no longer active' },
         { status: 410 }
       )
     }
 
-    // If invite has email, verify it matches
-    if (invite.email && invite.email !== user.email) {
+    // Verify the invited email matches the logged-in user
+    if (invitation.invited_email && invitation.invited_email !== user.email) {
       return NextResponse.json(
         { error: 'This invite was sent to a different email' },
         { status: 403 }
@@ -49,7 +49,7 @@ export async function POST(
     const { data: existingMembership } = await svc
       .from('table_memberships')
       .select('id')
-      .eq('table_id', invite.table_id)
+      .eq('table_id', invitation.table_id)
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -63,13 +63,14 @@ export async function POST(
     // Add user as member
     const { data: membership, error: memberError } = await svc
       .from('table_memberships')
-      .insert({
-        table_id: invite.table_id,
+      .upsert({
+        table_id: invitation.table_id,
         user_id: user.id,
-        role: 'member',
+        role: invitation.role,
         status: 'active',
+        invited_by: invitation.invited_by,
         joined_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'table_id,user_id' })
       .select()
       .single()
 
@@ -80,21 +81,21 @@ export async function POST(
       )
     }
 
-    // Mark invite as claimed
+    // Mark invitation as accepted
     await svc
-      .from('table_invites')
+      .from('table_invitations')
       .update({
-        status: 'claimed',
-        claimed_by: user.id,
-        claimed_at: new Date().toISOString(),
+        status: 'accepted',
+        accepted_by: user.id,
+        accepted_at: new Date().toISOString(),
       })
-      .eq('id', invite.id)
+      .eq('id', invitation.id)
 
     // Get table info
     const { data: table } = await svc
       .from('equity_tables')
       .select('id, name, slug')
-      .eq('id', invite.table_id)
+      .eq('id', invitation.table_id)
       .single()
 
     return NextResponse.json({

@@ -17,7 +17,7 @@ export default async function EventCheckinPage({ params, searchParams }: PagePro
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/auth/sign-in?redirect=/app/tables/${tableId}/events/${eventId}/checkin${token ? `?token=${token}` : ''}`)
+  if (!user) redirect(`/sign-in?redirect=/app/tables/${tableId}/events/${eventId}/checkin${token ? `?token=${token}` : ''}`)
 
   const [{ data: membership }, { data: event }] = await Promise.all([
     supabase
@@ -51,7 +51,7 @@ export default async function EventCheckinPage({ params, searchParams }: PagePro
             You need to sign in to check in to this event.
           </p>
           <Link
-            href={`/auth/sign-in?redirect=/app/tables/${tableId}/events/${eventId}/checkin`}
+            href={`/sign-in?redirect=/app/tables/${tableId}/events/${eventId}/checkin`}
             className="block rounded-xl bg-navy-500 py-3 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
           >
             Sign in →

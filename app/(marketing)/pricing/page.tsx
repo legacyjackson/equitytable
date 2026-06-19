@@ -56,8 +56,8 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Logo variant="light-bg" size="sm" /></Link>
           <div className="flex items-center gap-4">
-            <Link href="/auth/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground">Sign in</Link>
-            <Link href="/auth/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">
+            <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground">Sign in</Link>
+            <Link href="/sign-up" className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-600 transition-colors">
               Start an Equity Table
             </Link>
           </div>
@@ -106,7 +106,7 @@ export default function PricingPage() {
             </div>
 
             <Link
-              href="/auth/sign-up"
+              href="/sign-up"
               className="block text-center rounded-xl bg-gold-400 py-4 text-base font-bold text-navy-500 hover:bg-gold-300 transition-colors shadow-sm"
             >
               Start an Equity Table

@@ -17,7 +17,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const { tableId, lessonId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: membership } = await supabase
     .from('table_memberships')

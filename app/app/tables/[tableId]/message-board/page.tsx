@@ -24,7 +24,7 @@ export default async function MessageBoardPage({ params }: MessageBoardPageProps
   const { tableId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: membership }, { data: table }] = await Promise.all([
     supabase

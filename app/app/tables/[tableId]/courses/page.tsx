@@ -28,7 +28,7 @@ export default async function CoursesPage({ params }: CoursesPageProps) {
   const { tableId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   // Verify membership
   const { data: membership } = await supabase

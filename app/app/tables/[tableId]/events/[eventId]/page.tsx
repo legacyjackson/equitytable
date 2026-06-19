@@ -26,7 +26,7 @@ export default async function EventPage({ params }: EventPageProps) {
   const { tableId, eventId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: event }, { data: membership }, { data: rsvp }, { count: rawGoingCount }, { data: recordings }] =
     await Promise.all([

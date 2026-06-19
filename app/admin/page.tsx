@@ -9,7 +9,7 @@ export const metadata = { title: 'Super Admin' }
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: roleData } = await supabase
     .from('platform_roles')

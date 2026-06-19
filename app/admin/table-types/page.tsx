@@ -6,7 +6,7 @@ export const metadata = { title: 'Table Types — Admin' }
 export default async function AdminTableTypesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const { data: types } = await supabase
     .from('equity_table_types')

@@ -30,7 +30,8 @@ export function SignInContent() {
       })
 
       if (signInError) throw signInError
-      router.push('/app')
+      const redirect = searchParams.get('redirect')
+      router.push(redirect && redirect.startsWith('/') ? redirect : '/app')
     } catch (err: any) {
       setError(err.message || 'Failed to sign in')
     } finally {

@@ -50,13 +50,13 @@ export default async function InvitePage({ params }: InvitePageProps) {
             )}
             <div className="space-y-3">
               <Link
-                href={`/auth/sign-up?redirect=/invite/${code}`}
+                href={`/sign-up?redirect=/invite/${code}`}
                 className="block w-full rounded-xl bg-navy-500 py-3 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
               >
                 Create an account to join
               </Link>
               <Link
-                href={`/auth/sign-in?redirect=/invite/${code}`}
+                href={`/sign-in?redirect=/invite/${code}`}
                 className="block w-full rounded-xl border border-border py-3 text-sm font-semibold text-navy-500 hover:bg-muted transition-colors"
               >
                 Sign in to existing account
@@ -107,110 +107,18 @@ export default async function InvitePage({ params }: InvitePageProps) {
     redirect(`/app/tables/${invitation.table_id}?joined=true`)
   }
 
-  // --- Fall back to code-based system (table_invites) ---
-  const { data: invite } = await serviceClient
-    .from('table_invites')
-    .select('id, table_id, status, email')
-    .eq('code', code)
-    .maybeSingle()
-
-  if (!invite) {
-    return (
-      <InviteShell>
-        <div className="text-center">
-          <div className="text-4xl mb-4">🔍</div>
-          <h1 className="font-display text-2xl font-bold text-navy-500 mb-2">Invitation not found</h1>
-          <p className="text-muted-foreground text-sm">This invitation link is invalid or has already been used.</p>
-          <Link href="/" className="inline-flex mt-6 text-sm font-semibold text-blue-600 hover:underline">
-            Back to Equity Table
-          </Link>
-        </div>
-      </InviteShell>
-    )
-  }
-
-  if (invite.status !== 'active') {
-    return (
-      <InviteShell>
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏰</div>
-          <h1 className="font-display text-2xl font-bold text-navy-500 mb-2">Invite no longer active</h1>
-          <p className="text-muted-foreground text-sm">This invite has already been used or has expired.</p>
-        </div>
-      </InviteShell>
-    )
-  }
-
-  if (!user) {
-    return (
-      <InviteShell>
-        <div className="text-center">
-          <div className="text-3xl mb-4">🪑</div>
-          <h1 className="font-display text-2xl font-bold text-navy-500 mb-2">You're invited!</h1>
-          <p className="text-muted-foreground text-sm mb-6">
-            Join an Equity Table and start building wealth together.
-          </p>
-          <div className="space-y-3">
-            <Link
-              href={`/auth/sign-up?redirect=/invite/${code}`}
-              className="block w-full rounded-xl bg-navy-500 py-3 text-sm font-semibold text-white hover:bg-navy-600 transition-colors"
-            >
-              Create an account to join
-            </Link>
-            <Link
-              href={`/auth/sign-in?redirect=/invite/${code}`}
-              className="block w-full rounded-xl border border-border py-3 text-sm font-semibold text-navy-500 hover:bg-muted transition-colors"
-            >
-              Sign in to existing account
-            </Link>
-          </div>
-        </div>
-      </InviteShell>
-    )
-  }
-
-  // Email mismatch check
-  if (invite.email && invite.email !== user.email) {
-    return (
-      <InviteShell>
-        <div className="text-center">
-          <div className="text-4xl mb-4">✉️</div>
-          <h1 className="font-display text-2xl font-bold text-navy-500 mb-2">Wrong account</h1>
-          <p className="text-muted-foreground text-sm">
-            This invite was sent to a different email address.
-          </p>
-        </div>
-      </InviteShell>
-    )
-  }
-
-  // Logged in — auto-accept code invite
-  const { data: existingMembership } = await serviceClient
-    .from('table_memberships')
-    .select('id, status')
-    .eq('table_id', invite.table_id)
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (existingMembership?.status === 'active') {
-    redirect(`/app/tables/${invite.table_id}`)
-  }
-
-  await serviceClient.from('table_memberships').insert({
-    table_id: invite.table_id,
-    user_id: user.id,
-    role: 'member',
-    status: 'active',
-    joined_at: new Date().toISOString(),
-  })
-
-  await serviceClient.from('table_invites').update({
-    status: 'claimed',
-    claimed_by: user.id,
-    claimed_at: new Date().toISOString(),
-  }).eq('id', invite.id)
-
-  redirect(`/app/tables/${invite.table_id}?joined=true`)
+  return (
+    <InviteShell>
+      <div className="text-center">
+        <div className="text-4xl mb-4">🔍</div>
+        <h1 className="font-display text-2xl font-bold text-navy-500 mb-2">Invitation not found</h1>
+        <p className="text-muted-foreground text-sm">This invitation link is invalid or has already been used.</p>
+        <Link href="/" className="inline-flex mt-6 text-sm font-semibold text-blue-600 hover:underline">
+          Back to Equity Table
+        </Link>
+      </div>
+    </InviteShell>
+  )
 }
 
 function InviteShell({ children }: { children: React.ReactNode }) {

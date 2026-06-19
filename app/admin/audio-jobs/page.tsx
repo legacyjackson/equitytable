@@ -13,7 +13,7 @@ export default async function AdminAudioJobsPage({
   const { status } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   let query = supabase
     .from('lesson_audio')

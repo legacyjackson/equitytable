@@ -13,7 +13,7 @@ export default async function AdminSubscriptionsPage({
   const { status, page } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const pageNum = parseInt(page || '1', 10)
   const perPage = 25

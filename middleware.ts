@@ -17,9 +17,9 @@ const PUBLIC_PATHS = [
   '/how-it-works',
   '/table-types',
   '/equity-tables',
-  '/auth/sign-in',
-  '/auth/sign-up',
-  '/auth/callback',
+  '/sign-in',
+  '/sign-up',
+  '/api/auth/callback',
   '/legal',
   '/events',
 ]
@@ -64,13 +64,13 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users to sign in
   if (requiresAuth && !user) {
-    const redirectUrl = new URL('/auth/sign-in', request.url)
+    const redirectUrl = new URL('/sign-in', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && (pathname.startsWith('/auth/sign-in') || pathname.startsWith('/auth/sign-up'))) {
+  if (user && (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'))) {
     return NextResponse.redirect(new URL('/app', request.url))
   }
 

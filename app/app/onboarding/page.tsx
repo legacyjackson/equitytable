@@ -67,7 +67,7 @@ export default function OnboardingPage() {
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/auth/sign-in'); return }
+    if (!user) { router.push('/sign-in'); return }
 
     // Check username availability
     if (username.trim()) {

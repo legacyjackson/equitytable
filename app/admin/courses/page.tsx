@@ -14,7 +14,7 @@ export default async function AdminCoursesPage({
   const { q, status, category } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/sign-in')
 
   const [{ data: courses, count }, { data: categories }] = await Promise.all([
     (() => {
