@@ -42,6 +42,7 @@ export default function CreateTablePage() {
   const [userStats, setUserStats] = useState<{
     tablesOwned: number
     memberOfCount: number
+    hasActiveSubscription: boolean
     canCreate: boolean
   } | null>(null)
 
@@ -53,7 +54,9 @@ export default function CreateTablePage() {
   const name = watch('name')
   const totalSeats = 10 + additionalSeats
   const extraSeatsCost = additionalSeats * 4.99
-  const totalMonthly = additionalSeats > 0 ? 49.99 + extraSeatsCost : 49.99
+  const FREE_TABLES_PER_SUBSCRIPTION = 3
+  const isFreeBase = !!userStats?.hasActiveSubscription && userStats.tablesOwned < FREE_TABLES_PER_SUBSCRIPTION
+  const totalMonthly = isFreeBase ? extraSeatsCost : 49.99 + extraSeatsCost
 
   // Load user's table stats on mount
   useEffect(() => {
@@ -72,6 +75,19 @@ export default function CreateTablePage() {
 
     const tablesOwned = ownedTables?.length || 0
 
+    // Does the user have an active subscription on any table they own?
+    let hasActiveSubscription = false
+    if (tablesOwned > 0) {
+      const { data: activeSub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .in('table_id', ownedTables!.map((t) => t.id))
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+      hasActiveSubscription = !!activeSub
+    }
+
     // Count tables user is a MEMBER of (but doesn't own)
     const { data: memberTables } = await supabase
       .from('table_memberships')
@@ -83,12 +99,13 @@ export default function CreateTablePage() {
 
     // Can create if:
     // - Member of < 3 tables (can join up to 3)
-    // - OR they own at least 1 table (owners can create multiple)
+    // - OR they own at least 1 table (owners can create multiple, eventually paid)
     const canCreate = memberOfCount < 3 || tablesOwned > 0
 
     setUserStats({
       tablesOwned,
       memberOfCount,
+      hasActiveSubscription,
       canCreate,
     })
   }
@@ -131,8 +148,6 @@ export default function CreateTablePage() {
             table_type_id: selectedTypeId,
           },
           additionalSeats: additionalSeats,
-          tablesOwned: userStats.tablesOwned,
-          memberOfCount: userStats.memberOfCount,
         }),
       })
 
@@ -340,16 +355,18 @@ export default function CreateTablePage() {
               <div className="mt-6 rounded-xl bg-[#F8FAFF] border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-navy-500">Equity Table subscription</p>
+                    <p className="text-sm font-semibold text-navy-500">
+                      {isFreeBase ? 'Included with your subscription' : 'Equity Table subscription'}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {totalSeats} seats ({additionalSeats > 0 ? `10 included + ${additionalSeats} extra` : '10 included'})
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-display font-bold text-navy-500">
-                      ${totalMonthly.toFixed(2)}
+                      {totalMonthly > 0 ? `$${totalMonthly.toFixed(2)}` : 'Free'}
                     </p>
-                    <p className="text-xs text-muted-foreground">per month</p>
+                    {totalMonthly > 0 && <p className="text-xs text-muted-foreground">per month</p>}
                   </div>
                 </div>
               </div>
@@ -404,7 +421,7 @@ export default function CreateTablePage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">Equity Table (10 seats included)</p>
-                    <p className="text-sm font-bold text-navy-500">$49.99</p>
+                    <p className="text-sm font-bold text-navy-500">{isFreeBase ? 'Free' : '$49.99'}</p>
                   </div>
                   {additionalSeats > 0 && (
                     <div className="flex items-center justify-between">
@@ -414,13 +431,17 @@ export default function CreateTablePage() {
                   )}
                   <div className="border-t border-border pt-2 flex items-center justify-between">
                     <p className="text-sm font-bold">Monthly total</p>
-                    <p className="text-lg font-bold text-navy-500">${totalMonthly.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-navy-500">
+                      {totalMonthly > 0 ? `$${totalMonthly.toFixed(2)}` : 'Free'}
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  {userStats.tablesOwned === 0 && userStats.memberOfCount < 3
-                    ? 'Your first table is free with your $49.99/month subscription. Additional tables cost $49.99 each.'
-                    : 'Creating a new table costs $49.99/month. Cancel anytime.'}
+                  {isFreeBase
+                    ? `This table is included in your subscription (tables ${userStats.tablesOwned + 1} of ${FREE_TABLES_PER_SUBSCRIPTION} free). Extra seats are still billed separately.`
+                    : userStats.hasActiveSubscription
+                      ? `You've used your ${FREE_TABLES_PER_SUBSCRIPTION} free tables. This table costs $49.99/month.`
+                      : 'Your first table starts your $49.99/month subscription, which includes up to 3 tables.'}
                 </p>
               </div>
 
@@ -433,7 +454,11 @@ export default function CreateTablePage() {
                   'disabled:opacity-60 disabled:cursor-not-allowed'
                 )}
               >
-                {loading ? 'Setting up checkout…' : `Proceed to checkout — $${totalMonthly.toFixed(2)}/month`}
+                {loading
+                  ? 'Setting up checkout…'
+                  : totalMonthly > 0
+                    ? `Proceed to checkout — $${totalMonthly.toFixed(2)}/month`
+                    : 'Create table — Free'}
               </button>
 
               <p className="mt-4 text-xs text-muted-foreground text-center">

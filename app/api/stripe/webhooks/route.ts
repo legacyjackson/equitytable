@@ -75,6 +75,7 @@ async function handleCheckoutCompleted(
   const userId = metadata.user_id
   const tableName = metadata.table_name
   const tableTypeId = metadata.table_type_id
+  const compedBase = metadata.comped_base === 'true'
 
   if (!userId || !tableName || !tableTypeId) {
     console.error('Missing metadata in checkout session:', metadata)
@@ -162,17 +163,21 @@ async function handleCheckoutCompleted(
   }
 
   // Create subscription record
+  // When compedBase is true, this checkout only billed extra seats — the
+  // table's $49.99 base fee is included in the owner's free-table allowance.
   await supabase.from('subscriptions').insert({
     table_id: table.id,
     stripe_customer_id: session.customer as string,
     stripe_subscription_id: subscriptionId,
-    base_price_id: subscription.items.data[0]?.price.id,
+    base_price_id: compedBase ? null : subscription.items.data[0]?.price.id,
     status: subscription.status as 'active',
-    included_seats: 1,
+    included_seats: 10,
     extra_seats: additionalSeats,
     current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     cancel_at_period_end: subscription.cancel_at_period_end,
+    comped: compedBase,
+    comp_reason: compedBase ? "Included in subscriber's 3-table allowance (extra seats billed)" : null,
   })
 
   // Create affiliate link

@@ -1,20 +1,25 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe, PLANS } from '@/lib/stripe/client'
+import { getOwnerSubscriptionStatus, FREE_TABLES_PER_SUBSCRIPTION } from '@/lib/utils/ownerSubscription'
 
 // POST /api/stripe/checkout
 // Pricing & Access Logic:
-// 
-// OWNERS (tablesOwned > 0):
-// - Each new table = $49.99 + extra seats cost
 //
-// NON-OWNERS (tablesOwned = 0):
-// - Member of < 3 tables = Can create 1 table FREE (uses their active $49.99 subscription)
-// - Member of >= 3 tables = BLOCKED
+// A subscription is tied to a table (one $49.99/mo base subscription per
+// table), but a subscriber may own up to FREE_TABLES_PER_SUBSCRIPTION (3)
+// tables total without paying an additional base fee for tables #2 and #3
+// — only extra seats beyond the included 10 are billed separately.
 //
-// EXTRA SEATS:
-// - Only charged if > 0 additional seats requested
-// - $4.99 per extra seat/month
+// - User owns 0 tables and has no active subscription yet → must pay
+//   the base price to create their first table (this is what makes them
+//   a subscriber).
+// - User owns 1-2 tables and has an active subscription → tables #2/#3
+//   are free (comped). Extra seats are still billed if requested.
+// - User owns 3+ tables → every additional table is charged full price,
+//   same as a brand-new subscription.
+// - A user who is only a MEMBER (not owner) of 3+ tables is blocked from
+//   creating a new table, unless they already own at least one table.
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { tableSetup, additionalSeats = 0, tablesOwned = 0, memberOfCount = 0 } = body
+    const { tableSetup, additionalSeats = 0 } = body
 
     if (!tableSetup?.name || !tableSetup?.table_type_id) {
       return NextResponse.json({ error: 'Missing required table setup data' }, { status: 400 })
@@ -35,70 +40,72 @@ export async function POST(request: Request) {
     const serviceClient = await createServiceClient()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    // CASE 1: User owns 0 tables + is member of < 3 tables + has active subscription
-    // → Can create first table for FREE
-    if (tablesOwned === 0 && memberOfCount < 3) {
-      // Check for active subscription
-      const { data: activeSub } = await serviceClient
-        .from('subscriptions')
-        .select('stripe_subscription_id, stripe_customer_id, status')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle()
+    const { tablesOwnedCount, memberOfCount, activeSubscription } =
+      await getOwnerSubscriptionStatus(serviceClient, user.id)
 
-      if (activeSub?.stripe_customer_id && activeSub.status === 'active') {
-        // User has active subscription, can create table for FREE
-        
-        if (additionalSeats > 0) {
-          // But charge for extra seats if requested
-          const session = await stripe.checkout.sessions.create({
-            mode: 'subscription',
-            customer: activeSub.stripe_customer_id,
-            line_items: [
-              {
-                price: PLANS.extraSeat.priceId,
-                quantity: additionalSeats,
-              },
-            ],
-            subscription_data: {
-              metadata: {
-                user_id: user.id,
-                table_name: tableSetup.name,
-                table_type_id: tableSetup.table_type_id,
-                additional_seats: String(additionalSeats),
-              },
-            },
-            success_url: `${appUrl}/api/stripe/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${appUrl}/create-table?cancelled=true`,
-          })
-
-          return NextResponse.json({ url: session.url })
-        } else {
-          // No extra seats, create table immediately without payment
-          return NextResponse.json({
-            skipPayment: true,
-            tableSetup,
-            userId: user.id,
-            additionalSeats: 0,
-          })
-        }
-      }
-    }
-
-    // CASE 2: User is member of 3+ tables → BLOCKED
-    if (memberOfCount >= 3) {
+    // Members of 3+ tables can't spin up a new one unless they already own a table
+    if (tablesOwnedCount === 0 && memberOfCount >= 3) {
       return NextResponse.json(
         { error: 'You are a member of 3 tables. Please leave a table before creating a new one.' },
         { status: 403 }
       )
     }
 
-    // CASE 3: User owns 1+ tables OR has no active subscription
-    // → CHARGE $49.99 for new table + any extra seats
+    const hasFreeTableRemaining =
+      !!activeSubscription && tablesOwnedCount < FREE_TABLES_PER_SUBSCRIPTION
+
+    const sharedMetadata = {
+      user_id: user.id,
+      table_name: tableSetup.name,
+      table_type_id: tableSetup.table_type_id,
+      table_mission: tableSetup.mission || '',
+      table_description: tableSetup.description || '',
+      table_visibility: tableSetup.visibility || 'public',
+      additional_seats: String(additionalSeats),
+    }
+
+    if (hasFreeTableRemaining) {
+      if (additionalSeats > 0) {
+        // Base table is comped, but extra seats are still billed.
+        // Stripe still creates a real (seats-only) subscription so the
+        // extra seats can be tracked/cancelled like any other charge.
+        const session = await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          customer: activeSubscription!.stripe_customer_id ?? undefined,
+          customer_creation: activeSubscription!.stripe_customer_id ? undefined : 'always',
+          line_items: [
+            {
+              price: PLANS.extraSeat.priceId,
+              quantity: additionalSeats,
+            },
+          ],
+          subscription_data: {
+            metadata: { ...sharedMetadata, comped_base: 'true' },
+          },
+          metadata: { ...sharedMetadata, comped_base: 'true' },
+          success_url: `${appUrl}/api/stripe/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${appUrl}/create-table?cancelled=true`,
+        })
+
+        return NextResponse.json({ url: session.url })
+      }
+
+      // No extra seats — create the table immediately, no payment needed
+      return NextResponse.json({
+        skipPayment: true,
+        tableSetup,
+        userId: user.id,
+        additionalSeats: 0,
+      })
+    }
+
+    // Charged path — either their first-ever table (bootstraps a
+    // subscription) or table #4+ (a fresh, separately-billed table)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer_email: user.email,
-      customer_creation: 'always',
+      customer: activeSubscription?.stripe_customer_id ?? undefined,
+      customer_email: activeSubscription?.stripe_customer_id ? undefined : user.email,
+      customer_creation: activeSubscription?.stripe_customer_id ? undefined : 'always',
       line_items: [
         {
           price: PLANS.base.priceId,
@@ -110,21 +117,11 @@ export async function POST(request: Request) {
         }] : []),
       ],
       subscription_data: {
-        metadata: {
-          user_id: user.id,
-          table_name: tableSetup.name,
-          table_type_id: tableSetup.table_type_id,
-          additional_seats: String(additionalSeats),
-        },
+        metadata: sharedMetadata,
       },
       success_url: `${appUrl}/api/stripe/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/create-table?cancelled=true`,
-      metadata: {
-        user_id: user.id,
-        table_name: tableSetup.name,
-        table_type_id: tableSetup.table_type_id,
-        additional_seats: String(additionalSeats),
-      },
+      metadata: sharedMetadata,
       allow_promotion_codes: true,
     })
 

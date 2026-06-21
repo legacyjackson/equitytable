@@ -3,9 +3,13 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateAffiliateCode, buildAffiliateUrl } from '@/lib/utils/affiliate'
 import { slugify } from '@/lib/utils/slugify'
 import { bootstrapTableContent } from '@/lib/utils/bootstrapTableContent'
+import { getOwnerSubscriptionStatus, FREE_TABLES_PER_SUBSCRIPTION } from '@/lib/utils/ownerSubscription'
 
 // POST /api/tables/create-direct
-// Creates a table immediately for users with active $49.99 subscription (no payment needed)
+// Creates a table immediately, free of charge, for subscribers who still
+// have a free table slot remaining (see FREE_TABLES_PER_SUBSCRIPTION).
+// This route never touches Stripe — it only inserts a comped subscription
+// row tied to the new table.
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -24,16 +28,17 @@ export async function POST(request: Request) {
 
     const svc = await createServiceClient()
 
-    // Verify user has active subscription
-    const { data: activeSub } = await svc
-      .from('subscriptions')
-      .select('id, user_id, status')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single()
+    const { tablesOwnedCount, activeSubscription } = await getOwnerSubscriptionStatus(svc, user.id)
 
-    if (!activeSub) {
+    if (!activeSubscription) {
       return NextResponse.json({ error: 'No active subscription found' }, { status: 403 })
+    }
+
+    if (tablesOwnedCount >= FREE_TABLES_PER_SUBSCRIPTION) {
+      return NextResponse.json(
+        { error: `You've used all ${FREE_TABLES_PER_SUBSCRIPTION} free tables included with your subscription. Additional tables are $49.99/month.` },
+        { status: 403 }
+      )
     }
 
     // Generate unique slug
@@ -87,15 +92,19 @@ export async function POST(request: Request) {
       joined_at: new Date().toISOString(),
     })
 
-    // Update existing subscription to link this table
-    await svc
-      .from('subscriptions')
-      .update({
-        table_id: table.id,
-        included_seats: 10,
-        extra_seats: 0,
-      })
-      .eq('id', activeSub.id)
+    // This table's base fee is comped (included in the subscriber's
+    // 3-table allowance) — give it its own subscription row sharing the
+    // same Stripe customer, rather than re-pointing an existing table's
+    // subscription (subscriptions.table_id is unique, one row per table).
+    await svc.from('subscriptions').insert({
+      table_id: table.id,
+      stripe_customer_id: activeSubscription.stripe_customer_id,
+      status: 'active',
+      included_seats: 10,
+      extra_seats: 0,
+      comped: true,
+      comp_reason: `Included in subscriber's ${FREE_TABLES_PER_SUBSCRIPTION}-table allowance`,
+    })
 
     // Create affiliate link
     await svc.from('affiliate_links').insert({
