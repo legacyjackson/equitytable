@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         const session = await stripe.checkout.sessions.create({
           mode: 'subscription',
           customer: activeSubscription!.stripe_customer_id ?? undefined,
-          customer_creation: activeSubscription!.stripe_customer_id ? undefined : 'always',
+          customer_email: activeSubscription!.stripe_customer_id ? undefined : user.email,
           line_items: [
             {
               price: PLANS.extraSeat.priceId,
@@ -105,7 +105,6 @@ export async function POST(request: Request) {
       mode: 'subscription',
       customer: activeSubscription?.stripe_customer_id ?? undefined,
       customer_email: activeSubscription?.stripe_customer_id ? undefined : user.email,
-      customer_creation: activeSubscription?.stripe_customer_id ? undefined : 'always',
       line_items: [
         {
           price: PLANS.base.priceId,
