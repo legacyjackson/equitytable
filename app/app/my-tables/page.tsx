@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
+import { LeaveTableButton } from '@/components/tables/LeaveTableButton'
 
 export const metadata = { title: 'My Tables' }
 
@@ -120,50 +121,58 @@ export default async function MyTablesPage() {
             const statusDot = STATUS_DOT[t.status] ?? 'bg-gray-400'
 
             return (
-              <Link
-                key={m.table_id}
-                href={`/app/tables/${m.table_id}`}
-                className="et-card p-6 flex flex-col gap-4 hover:shadow-et-card-hover transition-all group"
-              >
-                {/* Header */}
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center text-xl font-bold text-navy-500 shrink-0 border border-navy-200/50">
-                    {t.name?.charAt(0) ?? '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={cn('w-2 h-2 rounded-full shrink-0', statusDot)} />
-                      <h3 className="font-semibold text-navy-500 truncate group-hover:text-blue-700 transition-colors">
-                        {t.name}
-                      </h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {t.table_type?.name ?? 'Equity Table'}
-                    </p>
-                  </div>
-                  <span className={cn('badge-pill shrink-0', roleInfo.color)}>
-                    {roleInfo.label}
-                  </span>
-                </div>
-
-                {/* Mission */}
-                {t.mission && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                    {t.mission}
-                  </p>
+              <div key={m.table_id} className="relative group">
+                {m.role !== 'owner' && (
+                  <LeaveTableButton
+                    tableId={m.table_id}
+                    tableName={t.name}
+                    className="absolute top-3 right-3 z-10"
+                  />
                 )}
+                <Link
+                  href={`/app/tables/${m.table_id}`}
+                  className="et-card p-6 flex flex-col gap-4 hover:shadow-et-card-hover transition-all block"
+                >
+                  {/* Header */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center text-xl font-bold text-navy-500 shrink-0 border border-navy-200/50">
+                      {t.name?.charAt(0) ?? '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className={cn('w-2 h-2 rounded-full shrink-0', statusDot)} />
+                        <h3 className="font-semibold text-navy-500 truncate group-hover:text-blue-700 transition-colors">
+                          {t.name}
+                        </h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {t.table_type?.name ?? 'Equity Table'}
+                      </p>
+                    </div>
+                    <span className={cn('badge-pill shrink-0', roleInfo.color, m.role !== 'owner' && 'mr-8')}>
+                      {roleInfo.label}
+                    </span>
+                  </div>
 
-                {/* Stats */}
-                <div className="flex items-center gap-4 pt-3 border-t border-border text-xs text-muted-foreground">
-                  <span><strong className="text-navy-500">{t.member_count}</strong> members</span>
-                  {t.pathway_participant_count > 0 && (
-                    <span><strong className="text-green-600">{t.pathway_participant_count}</strong> on Pathway</span>
+                  {/* Mission */}
+                  {t.mission && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                      {t.mission}
+                    </p>
                   )}
-                  <span className="ml-auto capitalize text-[10px] uppercase tracking-wider font-semibold">
-                    {t.visibility}
-                  </span>
-                </div>
-              </Link>
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 pt-3 border-t border-border text-xs text-muted-foreground">
+                    <span><strong className="text-navy-500">{t.member_count}</strong> members</span>
+                    {t.pathway_participant_count > 0 && (
+                      <span><strong className="text-green-600">{t.pathway_participant_count}</strong> on Pathway</span>
+                    )}
+                    <span className="ml-auto capitalize text-[10px] uppercase tracking-wider font-semibold">
+                      {t.visibility}
+                    </span>
+                  </div>
+                </Link>
+              </div>
             )
           })}
 
