@@ -218,6 +218,30 @@ export function LessonPlayer({
             {block.attribution && <cite className="text-xs not-italic mt-1 block">— {block.attribution}</cite>}
           </blockquote>
         )
+      case 'numbered_list':
+        return (
+          <ol key={idx} className="mb-4 space-y-2 list-decimal list-inside">
+            {block.items.map((item, i) => (
+              <li key={i} className="text-[15px] leading-relaxed pl-1">{item}</li>
+            ))}
+          </ol>
+        )
+      case 'image':
+        return (
+          <figure key={idx} className="my-5">
+            <img src={block.url} alt={block.alt || ''} className="w-full rounded-xl" />
+            {block.caption && <figcaption className="text-xs text-muted-foreground mt-2 text-center">{block.caption}</figcaption>}
+          </figure>
+        )
+      case 'video':
+        return (
+          <div key={idx} className="my-5">
+            {block.title && <p className="text-sm font-medium text-navy-500 mb-2">{block.title}</p>}
+            <video src={block.url} controls className="w-full rounded-xl" />
+          </div>
+        )
+      case 'divider':
+        return <hr key={idx} className="my-6 border-border" />
       default:
         return null
     }
