@@ -121,18 +121,8 @@ export default async function MyTablesPage() {
             const statusDot = STATUS_DOT[t.status] ?? 'bg-gray-400'
 
             return (
-              <div key={m.table_id} className="relative group">
-                {m.role !== 'owner' && (
-                  <LeaveTableButton
-                    tableId={m.table_id}
-                    tableName={t.name}
-                    className="absolute top-3 right-3 z-10"
-                  />
-                )}
-                <Link
-                  href={`/app/tables/${m.table_id}`}
-                  className="et-card p-6 flex flex-col gap-4 hover:shadow-et-card-hover transition-all block"
-                >
+              <div key={m.table_id} className="et-card overflow-hidden flex flex-col group hover:shadow-et-card-hover transition-all">
+                <Link href={`/app/tables/${m.table_id}`} className="p-6 flex flex-col gap-4 flex-1">
                   {/* Header */}
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center text-xl font-bold text-navy-500 shrink-0 border border-navy-200/50">
@@ -149,7 +139,7 @@ export default async function MyTablesPage() {
                         {t.table_type?.name ?? 'Equity Table'}
                       </p>
                     </div>
-                    <span className={cn('badge-pill shrink-0', roleInfo.color, m.role !== 'owner' && 'mr-8')}>
+                    <span className={cn('badge-pill shrink-0', roleInfo.color)}>
                       {roleInfo.label}
                     </span>
                   </div>
@@ -172,6 +162,12 @@ export default async function MyTablesPage() {
                     </span>
                   </div>
                 </Link>
+
+                {m.role !== 'owner' && (
+                  <div className="px-6 py-3 border-t border-border bg-muted/20 flex justify-end">
+                    <LeaveTableButton tableId={m.table_id} tableName={t.name} />
+                  </div>
+                )}
               </div>
             )
           })}

@@ -37,13 +37,12 @@ export function LeaveTableButton({
     <button
       onClick={handleLeave}
       disabled={loading}
-      title="Leave table"
       className={cn(
-        'rounded-full bg-white/90 shadow-md w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-red-600 hover:bg-white transition-colors disabled:opacity-50',
+        'inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50 shrink-0',
         className
       )}
     >
-      {loading ? '…' : '✕'}
+      {loading ? 'Leaving…' : 'Leave table'}
     </button>
   )
 }

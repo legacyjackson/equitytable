@@ -29,7 +29,7 @@ export default async function MembersPage({ params }: MembersPageProps) {
 
     supabase
       .from('table_memberships')
-      .select('*, profiles(id, email, full_name, avatar_url, username)')
+      .select('*, profiles!table_memberships_user_id_fkey(id, email, full_name, avatar_url, username)')
       .eq('table_id', tableId)
       .in('status', ['active', 'invited', 'pending'])
       .order('joined_at', { ascending: false }),
