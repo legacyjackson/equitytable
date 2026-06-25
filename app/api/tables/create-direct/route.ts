@@ -28,17 +28,19 @@ export async function POST(request: Request) {
 
     const svc = await createServiceClient()
 
-    const { tablesOwnedCount, activeSubscription } = await getOwnerSubscriptionStatus(svc, user.id)
+    const { tablesOwnedCount, activeSubscription, unlimitedTables } = await getOwnerSubscriptionStatus(svc, user.id)
 
-    if (!activeSubscription) {
-      return NextResponse.json({ error: 'No active subscription found' }, { status: 403 })
-    }
+    if (!unlimitedTables) {
+      if (!activeSubscription) {
+        return NextResponse.json({ error: 'No active subscription found' }, { status: 403 })
+      }
 
-    if (tablesOwnedCount >= FREE_TABLES_PER_SUBSCRIPTION) {
-      return NextResponse.json(
-        { error: `You've used all ${FREE_TABLES_PER_SUBSCRIPTION} free tables included with your subscription. Additional tables are $49.99/month.` },
-        { status: 403 }
-      )
+      if (tablesOwnedCount >= FREE_TABLES_PER_SUBSCRIPTION) {
+        return NextResponse.json(
+          { error: `You've used all ${FREE_TABLES_PER_SUBSCRIPTION} free tables included with your subscription. Additional tables are $49.99/month.` },
+          { status: 403 }
+        )
+      }
     }
 
     // Generate unique slug
@@ -98,12 +100,14 @@ export async function POST(request: Request) {
     // subscription (subscriptions.table_id is unique, one row per table).
     await svc.from('subscriptions').insert({
       table_id: table.id,
-      stripe_customer_id: activeSubscription.stripe_customer_id,
+      stripe_customer_id: activeSubscription?.stripe_customer_id ?? null,
       status: 'active',
       included_seats: 10,
       extra_seats: 0,
       comped: true,
-      comp_reason: `Included in subscriber's ${FREE_TABLES_PER_SUBSCRIPTION}-table allowance`,
+      comp_reason: unlimitedTables
+        ? 'Internal test account — unlimited table access'
+        : `Included in subscriber's ${FREE_TABLES_PER_SUBSCRIPTION}-table allowance`,
     })
 
     // Create affiliate link

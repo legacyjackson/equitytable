@@ -22,7 +22,15 @@ export async function getOwnerSubscriptionStatus(
   tablesOwnedCount: number
   memberOfCount: number
   activeSubscription: ActiveSubscription | null
+  unlimitedTables: boolean
 }> {
+  const { data: unlimitedRow } = await supabase
+    .from('unlimited_table_access')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const unlimitedTables = !!unlimitedRow
+
   const { data: ownedTables } = await supabase
     .from('equity_tables')
     .select('id')
@@ -54,5 +62,6 @@ export async function getOwnerSubscriptionStatus(
     tablesOwnedCount,
     memberOfCount: memberOfCount ?? 0,
     activeSubscription,
+    unlimitedTables,
   }
 }

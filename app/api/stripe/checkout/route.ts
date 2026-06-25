@@ -40,11 +40,11 @@ export async function POST(request: Request) {
     const serviceClient = await createServiceClient()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    const { tablesOwnedCount, memberOfCount, activeSubscription } =
+    const { tablesOwnedCount, memberOfCount, activeSubscription, unlimitedTables } =
       await getOwnerSubscriptionStatus(serviceClient, user.id)
 
     // Members of 3+ tables can't spin up a new one unless they already own a table
-    if (tablesOwnedCount === 0 && memberOfCount >= 3) {
+    if (!unlimitedTables && tablesOwnedCount === 0 && memberOfCount >= 3) {
       return NextResponse.json(
         { error: 'You are a member of 3 tables. Please leave a table before creating a new one.' },
         { status: 403 }
@@ -52,7 +52,8 @@ export async function POST(request: Request) {
     }
 
     const hasFreeTableRemaining =
-      !!activeSubscription && tablesOwnedCount < FREE_TABLES_PER_SUBSCRIPTION
+      unlimitedTables ||
+      (!!activeSubscription && tablesOwnedCount < FREE_TABLES_PER_SUBSCRIPTION)
 
     const sharedMetadata = {
       user_id: user.id,
@@ -71,8 +72,8 @@ export async function POST(request: Request) {
         // extra seats can be tracked/cancelled like any other charge.
         const session = await stripe.checkout.sessions.create({
           mode: 'subscription',
-          customer: activeSubscription!.stripe_customer_id ?? undefined,
-          customer_email: activeSubscription!.stripe_customer_id ? undefined : user.email,
+          customer: activeSubscription?.stripe_customer_id ?? undefined,
+          customer_email: activeSubscription?.stripe_customer_id ? undefined : user.email,
           line_items: [
             {
               price: PLANS.extraSeat.priceId,

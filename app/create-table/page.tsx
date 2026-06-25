@@ -44,6 +44,7 @@ export default function CreateTablePage() {
     memberOfCount: number
     hasActiveSubscription: boolean
     canCreate: boolean
+    unlimitedTables: boolean
   } | null>(null)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<CreateTableInput>({
@@ -55,7 +56,7 @@ export default function CreateTablePage() {
   const totalSeats = 10 + additionalSeats
   const extraSeatsCost = additionalSeats * 4.99
   const FREE_TABLES_PER_SUBSCRIPTION = 3
-  const isFreeBase = !!userStats?.hasActiveSubscription && userStats.tablesOwned < FREE_TABLES_PER_SUBSCRIPTION
+  const isFreeBase = !!userStats?.unlimitedTables || (!!userStats?.hasActiveSubscription && (userStats?.tablesOwned ?? 0) < FREE_TABLES_PER_SUBSCRIPTION)
   const totalMonthly = isFreeBase ? extraSeatsCost : 49.99 + extraSeatsCost
 
   // Load user's table stats on mount
@@ -66,6 +67,14 @@ export default function CreateTablePage() {
   const loadUserStats = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+
+    // Internal test/admin accounts exempt from the normal billing caps
+    const { data: unlimitedRow } = await supabase
+      .from('unlimited_table_access')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    const unlimitedTables = !!unlimitedRow
 
     // Count tables user OWNS
     const { data: ownedTables } = await supabase
@@ -98,15 +107,17 @@ export default function CreateTablePage() {
     const memberOfCount = memberTables?.length || 0
 
     // Can create if:
-    // - Member of < 3 tables (can join up to 3)
-    // - OR they own at least 1 table (owners can create multiple, eventually paid)
-    const canCreate = memberOfCount < 3 || tablesOwned > 0
+    // - Unlimited test access, OR
+    // - Member of < 3 tables (can join up to 3), OR
+    // - They own at least 1 table (owners can create multiple, eventually paid)
+    const canCreate = unlimitedTables || memberOfCount < 3 || tablesOwned > 0
 
     setUserStats({
       tablesOwned,
       memberOfCount,
       hasActiveSubscription,
       canCreate,
+      unlimitedTables,
     })
   }
 
@@ -437,11 +448,13 @@ export default function CreateTablePage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  {isFreeBase
-                    ? `This table is included in your subscription (tables ${userStats.tablesOwned + 1} of ${FREE_TABLES_PER_SUBSCRIPTION} free). Extra seats are still billed separately.`
-                    : userStats.hasActiveSubscription
-                      ? `You've used your ${FREE_TABLES_PER_SUBSCRIPTION} free tables. This table costs $49.99/month.`
-                      : 'Your first table starts your $49.99/month subscription, which includes up to 3 tables.'}
+                  {userStats.unlimitedTables
+                    ? 'This account has unlimited table access. Extra seats are still billed separately.'
+                    : isFreeBase
+                      ? `This table is included in your subscription (tables ${userStats.tablesOwned + 1} of ${FREE_TABLES_PER_SUBSCRIPTION} free). Extra seats are still billed separately.`
+                      : userStats.hasActiveSubscription
+                        ? `You've used your ${FREE_TABLES_PER_SUBSCRIPTION} free tables. This table costs $49.99/month.`
+                        : 'Your first table starts your $49.99/month subscription, which includes up to 3 tables.'}
                 </p>
               </div>
 
