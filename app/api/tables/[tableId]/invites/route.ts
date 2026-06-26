@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email'
+import { tableInviteEmail } from '@/lib/email/templates'
 
 // GET /api/tables/[tableId]/invites
 // List pending invitations for a table
@@ -104,9 +106,21 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
     }
 
-    // TODO: send email notification via Resend with the invite link
-
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const inviteLink = `${appUrl}/invite/${invite.token}`
+
+    const { data: { user: inviter } } = await supabase.auth.getUser()
+    const inviterName = inviter?.user_metadata?.full_name ?? inviter?.email ?? 'Someone'
+
+    const { subject, html } = tableInviteEmail({
+      inviterName,
+      tableName: table.name,
+      inviteLink,
+      role: invite.role,
+    })
+    await sendEmail({ to: invite.invited_email, subject, html }).catch((err) =>
+      console.error('Invite email failed:', err)
+    )
 
     return NextResponse.json({
       invite: {
@@ -114,7 +128,7 @@ export async function POST(
         email: invite.invited_email,
         role: invite.role,
         status: invite.status,
-        link: `${appUrl}/invite/${invite.token}`,
+        link: inviteLink,
         expires_at: invite.expires_at,
         created_at: invite.created_at,
       },
